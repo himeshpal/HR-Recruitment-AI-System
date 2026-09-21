@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     llm_base_url: str = "https://api.groq.com/openai/v1"
     llm_model_large: str = "openai/gpt-oss-120b"
     llm_model_small: str = "openai/gpt-oss-20b"
-    llm_max_attempts: int = 4
+    llm_max_attempts: int = 8  # free tiers rate-limit hard; waiting is cheaper than failing
     llm_timeout_seconds: float = 60.0
 
     database_url: str = f"sqlite:///{(BACKEND_DIR / 'data' / 'hr.db').as_posix()}"

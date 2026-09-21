@@ -58,6 +58,10 @@ class Match(Base):
     evidence: Mapped[list | None] = mapped_column(JSON, default=None)
     strengths: Mapped[list | None] = mapped_column(JSON, default=None)
     gaps: Mapped[list | None] = mapped_column(JSON, default=None)
+    summary: Mapped[str] = mapped_column(Text, default="")
+    skill_details: Mapped[list | None] = mapped_column(JSON, default=None)  # per-skill: demonstrated / listed / missing
+    confidence: Mapped[float] = mapped_column(Float, default=0.0)
+    dropped_quotes: Mapped[int] = mapped_column(Integer, default=0)  # evidence quotes rejected as not verbatim
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
     job: Mapped[Job] = relationship(back_populates="matches")

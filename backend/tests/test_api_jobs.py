@@ -51,7 +51,7 @@ def test_generate_streams_tokens_then_done_and_saves(api):
 def test_generate_reports_llm_failure_as_an_error_event_and_saves_nothing(api):
     response = httpx.Response(429, request=httpx.Request("POST", "http://x/v1"))
     err = openai.RateLimitError("slow down", response=response, body=None)
-    client, _ = api([err] * 4)
+    client, _ = api([err] * 50)  # more than the retry limit; the (fake) waits are instant
     job = new_job(client)
 
     events = sse_events(client.post(f"/api/jobs/{job['id']}/generate"))

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Briefcase, LayoutDashboard, Sparkles, Users } from "lucide-react";
+import { Briefcase, Kanban, LayoutDashboard, ListChecks, Sparkles, Users } from "lucide-react";
 
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
@@ -11,6 +11,8 @@ const NAV = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/jobs", label: "Jobs", icon: Briefcase },
   { href: "/candidates", label: "Candidates", icon: Users },
+  { href: "/screening", label: "Screening", icon: ListChecks },
+  { href: "/pipeline", label: "Pipeline", icon: Kanban },
 ];
 
 function Brand() {

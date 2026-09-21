@@ -1,0 +1,88 @@
+{
+  "ranking": {
+    "per_job": {
+      "backend": {
+        "top1": true,
+        "matcher": {
+          "pairwise": 0.875,
+          "spearman": 0.6338167389745971,
+          "ndcg3": 0.894999002123018
+        },
+        "baseline": {
+          "pairwise": 0.7708333333333334,
+          "spearman": 0.5081802050726101,
+          "ndcg3": 0.8400079830158563
+        }
+      },
+      "frontend": {
+        "top1": true,
+        "matcher": {
+          "pairwise": 1.0,
+          "spearman": 0.812776759390954,
+          "ndcg3": 1.0
+        },
+        "baseline": {
+          "pairwise": 1.0,
+          "spearman": 0.9156754547663372,
+          "ndcg3": 1.0
+        }
+      },
+      "data": {
+        "top1": true,
+        "matcher": {
+          "pairwise": 1.0,
+          "spearman": 0.812776759390954,
+          "ndcg3": 1.0
+        },
+        "baseline": {
+          "pairwise": 0.9791666666666666,
+          "spearman": 0.9954022744967957,
+          "ndcg3": 1.0
+        }
+      }
+    },
+    "summary": {
+      "matcher": {
+        "pairwise": 0.958,
+        "spearman": 0.753,
+        "ndcg3": 0.965
+      },
+      "baseline": {
+        "pairwise": 0.917,
+        "spearman": 0.806,
+        "ndcg3": 0.947
+      }
+    }
+  },
+  "evidence_bias": {
+    "quotes": 128,
+    "valid_quotes": 128,
+    "dropped_quotes": 1,
+    "matches": 30,
+    "identity_leaks": 0
+  },
+  "injection": {
+    "with_injection": 42.9,
+    "without": 46.9
+  },
+  "fairness": {
+    "shield_on": {
+      "base": 96.2,
+      "deltas": {
+        "different name + gender": 0.0,
+        "different origin": 0.0,
+        "less prestigious school": 0.0
+      },
+      "worst": 0.0
+    },
+    "shield_off": {
+      "base": 96.2,
+      "deltas": {
+        "different name + gender": 0.7999999999999972,
+        "different origin": 0.7999999999999972,
+        "less prestigious school": 0.0
+      },
+      "worst": 0.7999999999999972
+    }
+  }
+}

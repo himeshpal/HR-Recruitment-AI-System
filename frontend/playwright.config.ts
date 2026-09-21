@@ -14,5 +14,6 @@ export default defineConfig({
     channel: "msedge",
     viewport: { width: 1366, height: 900 },
     trace: "retain-on-failure",
+    screenshot: "only-on-failure",
   },
 });

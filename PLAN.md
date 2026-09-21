@@ -44,7 +44,7 @@ A **Bias Shield** (blind screening + fairness panel) sits across the whole pipel
 | Backend | Python + FastAPI, with SSE streaming | Fast, simple, streams AI output live |
 | Agent orchestration | LangGraph (state graph) | Visual, explainable flow; nodes map to agents |
 | Database | SQLite (via SQLAlchemy) | Zero setup |
-| Vector search | ChromaDB + `sentence-transformers` (`all-MiniLM-L6-v2`), run locally | Free, no API needed for embeddings |
+| Embeddings | `fastembed` (`all-MiniLM-L6-v2` via ONNX) + numpy cosine similarity, run locally | Free, no API needed. Replaces the originally planned ChromaDB + sentence-transformers: no PyTorch, no vector database, and a few dozen resumes do not need one |
 | LLM | **Groq API** (OpenAI-compatible) | Free tier, very fast, so streaming looks great |
 | Voice | Browser Web Speech API | Free, no server needed (works best in Chrome) |
 | Tests | pytest, Playwright | Unit, evaluation and end-to-end |
@@ -180,14 +180,42 @@ Every agent's schema lives in code (Pydantic), so it is validated and retried au
 4. **Candidates UI**: drag-and-drop bulk upload with per-file progress.
 5. **Check:** upload 10 sample resumes and inspect the parsed JSON for correctness.
 
-### Phase 2: Matching and screening (Days 5–8), the core feature
-1. Embeddings service (chunk resume, store in Chroma).
-2. **Matcher**: skill-overlap score + embedding similarity + LLM rubric, combined into one explainable score.
-3. Evidence validator (quotes must exist in the resume text).
+### Phase 2: Matching and screening (Days 5–8), the core feature — DONE
+1. Embeddings service (local MiniLM, cosine similarity of the job against the best resume chunks).
+2. **Matcher**: skill coverage + semantic similarity + years of experience + LLM rubric, blended in code into one explainable score.
+3. Evidence validator (every quote must exist word for word in the resume the AI saw; one retry, then dropped).
 4. **Screening board UI**: ranked cards, animated score rings, skill chips, slide-over **resume viewer with highlighted evidence**.
-5. **Bias Shield**: an anonymizer that strips name, gender cues, photos and college names, a blind-mode toggle, and a before/after view.
-6. **Kanban pipeline** with drag-and-drop stage changes.
-7. **Check:** run the golden dataset (section 9) and confirm the strong candidates rank above the weak ones.
+5. **Bias Shield**: an anonymizer that strips name, gender cues, contact details, location and school names, a blind-mode toggle, and a before/after view.
+6. **Kanban pipeline** with drag-and-drop stage changes (plus a Move menu for keyboard and touch).
+7. **Check:** `backend/scripts/phase2_check.py` runs the golden dataset against the real LLM (results in `backend/data/eval/phase2.json`).
+
+**How the Matcher scores (implemented):**
+
+| Signal | Weight | What it measures |
+|---|---|---|
+| Skills coverage | 30% | Each required skill: shown in real work = full credit, only listed in the skills section = half, missing = none. Defeats keyword stuffing. |
+| AI review | 40% | The LLM's rubric score (skills and domain fit) for the anonymised resume. |
+| Experience | 20% | Years against the job's minimum, multiplied by how relevant the AI judged that experience, so unrelated years earn nothing. Left out (weights renormalised) when the job sets no minimum. |
+| Semantic fit | 10% | Local embedding similarity between the job and the best resume chunks. |
+
+**Design decisions made during the build:**
+- **Scoring is always blind.** The AI only ever sees the anonymised resume. The UI "Blind mode" toggle hides names and contact details from the *recruiter* as well (on by default). Scoring without the Bias Shield exists only as an experiment in the fairness test.
+- **Groq's free tier allows 8,000 tokens per minute** on `gpt-oss-120b`, roughly four candidates a minute. The LLM wrapper therefore pauses all threads together when one is rate-limited (reading Groq's "try again in Ns"), and retries up to 8 times. Screening 10 candidates takes seconds when cached and a few minutes when not.
+- **SQLite runs in WAL mode with a 30 s busy timeout** because screening writes from several threads.
+
+**Phase 2 validation results** (10 synthetic resumes, 3 jobs, hand-written relevance grades fixed before the first run):
+
+| Check | Result |
+|---|---|
+| Best candidate ranked #1 for every job | 3 of 3 |
+| Pairwise ranking accuracy (Matcher vs keyword baseline) | 0.958 vs 0.917 |
+| Spearman rank correlation (Matcher vs keyword baseline) | 0.753 vs 0.806 |
+| Evidence quotes verbatim in the text the AI saw | 128 of 128 |
+| Identity details surviving in the anonymised text | none |
+| Prompt-injection score change | -4.0 points |
+| Score change from swapping name, origin or school (Bias Shield on / off) | 0.0 / 0.8 points |
+
+**Known limitations, stated honestly:** the sample is small (10 resumes) and clean, so the keyword baseline is strong: the Matcher wins on pairwise accuracy and top-3 quality but is slightly behind on Spearman. Transferable experience is under-rated (the Java developer ranks 6th of 10 for the Python job, where I graded her a partial fit). Close calls are brittle (in the Data Analyst job, ranks 1 and 2 are 1.2 points apart). Without the Bias Shield the model showed little bias in the swap test (0.8 points), so the Shield is protection by construction rather than a fix for a large measured bias.
 
 ### Phase 3: Panel and interviews (Days 9–12)
 1. **Panel Recommender** (three personas run in parallel, then the moderator).

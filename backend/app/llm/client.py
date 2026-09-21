@@ -10,6 +10,8 @@ retries), streaming, and one AgentRun row per call for the activity timeline.
 
 import json
 import logging
+import re
+import threading
 import time
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
@@ -34,7 +36,8 @@ _RETRYABLE = (
     openai.APIConnectionError,  # includes timeouts
     openai.InternalServerError,
 )
-_MAX_BACKOFF_SECONDS = 30.0
+_MAX_BACKOFF_SECONDS = 60.0
+_RETRY_AFTER_MESSAGE = re.compile(r"try again in ([\d.]+)\s*(ms|s)", re.IGNORECASE)
 _REPLAY_CHUNK_CHARS = 24
 
 
@@ -72,12 +75,16 @@ class LLMClient:
         cache: DiskCache | None = None,
         session_factory: Callable[[], Any] | None = None,
         sleep: Callable[[float], None] = time.sleep,
+        clock: Callable[[], float] = time.monotonic,
     ):
         self.settings = settings or get_settings()
         self._client = client
         self.cache = cache or DiskCache(self.settings.llm_cache_dir)
         self.session_factory = session_factory
         self._sleep = sleep
+        self._clock = clock
+        self._cooldown_until = 0.0  # shared by all threads: one 429 pauses everyone
+        self._cooldown_lock = threading.Lock()
 
     # ---------- plumbing ----------
 
@@ -102,9 +109,16 @@ class LLMClient:
             return model
         return self.settings.llm_model_large if tier == "large" else self.settings.llm_model_small
 
+    def _wait_for_cooldown(self) -> None:
+        with self._cooldown_lock:
+            wait = self._cooldown_until - self._clock()
+        if wait > 0:
+            self._sleep(wait)
+
     def _with_retries(self, call: Callable[[], Any]) -> Any:
         attempts = self.settings.llm_max_attempts
         for attempt in range(1, attempts + 1):
+            self._wait_for_cooldown()
             try:
                 return call()
             except _RETRYABLE as exc:
@@ -112,13 +126,19 @@ class LLMClient:
                     raise LLMError(f"LLM unavailable after {attempts} attempts: {exc}") from exc
                 delay = self._retry_delay(exc, attempt)
                 logger.warning("LLM call failed (%s); retry %d in %.1fs", type(exc).__name__, attempt, delay)
-                self._sleep(delay)
+                if isinstance(exc, openai.RateLimitError):
+                    # A provider limit applies to every request, so make all threads wait it out together.
+                    with self._cooldown_lock:
+                        self._cooldown_until = max(self._cooldown_until, self._clock() + delay)
+                else:
+                    self._sleep(delay)
             except openai.APIStatusError as exc:
                 raise LLMError(f"LLM request rejected ({exc.status_code}): {exc.message}") from exc
         raise AssertionError("unreachable")
 
     @staticmethod
     def _retry_delay(exc: Exception, attempt: int) -> float:
+        """How long to wait: the server's Retry-After header, else the 'try again in Xs' in its message."""
         response = getattr(exc, "response", None)
         header = response.headers.get("retry-after") if response is not None else None
         try:
@@ -126,6 +146,9 @@ class LLMClient:
                 return min(float(header), _MAX_BACKOFF_SECONDS)
         except ValueError:
             pass
+        if match := _RETRY_AFTER_MESSAGE.search(str(exc)):
+            seconds = float(match[1]) / (1000 if match[2].lower() == "ms" else 1)
+            return min(seconds + 0.5, _MAX_BACKOFF_SECONDS)
         return min(2.0**attempt, _MAX_BACKOFF_SECONDS)
 
     def _request_kwargs(

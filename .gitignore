@@ -9,7 +9,8 @@ __pycache__/
 .pytest_cache/
 
 # runtime data
-backend/data/hr.db
+backend/data/hr.db*
 backend/data/llm_cache/
 backend/data/chroma/
 backend/data/uploads/
+backend/data/models/

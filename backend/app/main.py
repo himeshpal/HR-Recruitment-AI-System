@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.config import get_settings
 from app.db import get_db, init_db
 from app.llm.client import LLMError
-from app.routers import candidates, jobs
+from app.routers import candidates, jobs, screening
 
 
 @asynccontextmanager
@@ -27,6 +27,7 @@ async def llm_error_handler(_: Request, exc: LLMError) -> JSONResponse:
 
 app.include_router(jobs.router)
 app.include_router(candidates.router)
+app.include_router(screening.router)
 
 app.add_middleware(
     CORSMiddleware,

@@ -12,7 +12,7 @@ import { formatDate } from "@/lib/format";
 import type { Job } from "@/lib/types";
 import { useFetch } from "@/lib/use-fetch";
 
-export function JobsList() {
+export function JobsList({ basePath = "/jobs" }: { basePath?: string }) {
   const { state, reload } = useFetch<Job[]>("/api/jobs");
 
   if (state.status === "loading") return <JobsSkeleton />;
@@ -35,7 +35,7 @@ export function JobsList() {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {state.data.map((job) => (
-        <Link key={job.id} href={`/jobs/${job.id}`} className="group rounded-xl outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
+        <Link key={job.id} href={`${basePath}/${job.id}`} className="group rounded-xl outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
           <Card className="h-full transition-all group-hover:-translate-y-0.5 group-hover:shadow-md">
             <CardContent className="flex h-full flex-col gap-3">
               <div className="flex items-start justify-between gap-2">

@@ -1,6 +1,6 @@
 import { API_URL, ApiError, errorMessage } from "@/lib/api";
 
-export type SSEEvent =
+export type JdEvent =
   | { type: "token"; text: string }
   | { type: "done"; markdown: string }
   | { type: "error"; message: string };
@@ -10,9 +10,9 @@ export type SSEEvent =
  * (EventSource only supports GET, so this reads the fetch body stream directly.)
  * Resolves quietly if `signal` aborts.
  */
-export async function streamSSE(
+export async function streamSSE<E>(
   path: string,
-  onEvent: (event: SSEEvent) => void,
+  onEvent: (event: E) => void,
   signal?: AbortSignal,
 ): Promise<void> {
   try {
@@ -32,7 +32,7 @@ export async function streamSSE(
       buffer = messages.pop() ?? "";
       for (const message of messages) {
         const line = message.split("\n").find((l) => l.startsWith("data: "));
-        if (line) onEvent(JSON.parse(line.slice(6)) as SSEEvent);
+        if (line) onEvent(JSON.parse(line.slice(6)) as E);
       }
     }
   } catch (err) {

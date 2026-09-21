@@ -1,9 +1,8 @@
+import threading
 from types import SimpleNamespace
 
 import pytest
-from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
 
 from app.config import Settings
 from app.db import Base
@@ -12,15 +11,21 @@ from app.llm.client import LLMClient
 
 
 class FakeCompletions:
-    """Stands in for client.chat.completions. Each script item is a reply string or an Exception."""
+    """Stands in for client.chat.completions.
+
+    `script` is either a list of replies (a string, a list of stream pieces, or an Exception, used in
+    order) or a function taking the request kwargs and returning one, for parallel code paths.
+    """
 
     def __init__(self, script):
-        self.script = list(script)
+        self.script = script if callable(script) else list(script)
         self.calls = []
+        self._lock = threading.Lock()
 
     def create(self, **kwargs):
-        self.calls.append(kwargs)
-        item = self.script.pop(0)
+        with self._lock:
+            self.calls.append(kwargs)
+            item = self.script(kwargs) if callable(self.script) else self.script.pop(0)
         if isinstance(item, Exception):
             raise item
         if kwargs.get("stream"):
@@ -41,19 +46,25 @@ class FakeOpenAI:
 
 
 @pytest.fixture
-def session_factory():
+def session_factory(tmp_path):
+    """A real SQLite file per test, configured exactly like production (threads get their own connections)."""
     from app import models  # noqa: F401  (registers tables on Base)
+    from app.db import make_engine
 
-    engine = create_engine(
-        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
-    )
+    engine = make_engine(f"sqlite:///{(tmp_path / 'test.db').as_posix()}")
     Base.metadata.create_all(engine)
-    return sessionmaker(bind=engine, expire_on_commit=False)
+    yield sessionmaker(bind=engine, expire_on_commit=False)
+    engine.dispose()
 
 
 @pytest.fixture
 def make_llm(tmp_path, session_factory):
     sleeps: list[float] = []
+    now = [0.0]
+
+    def fake_sleep(seconds: float) -> None:
+        sleeps.append(seconds)
+        now[0] += seconds  # sleeping moves the fake clock, so cooldowns behave like real time
 
     def _make(script) -> tuple[LLMClient, FakeOpenAI]:
         fake = FakeOpenAI(script)
@@ -63,7 +74,8 @@ def make_llm(tmp_path, session_factory):
             client=fake,
             cache=DiskCache(tmp_path / "cache"),
             session_factory=session_factory,
-            sleep=sleeps.append,
+            sleep=fake_sleep,
+            clock=lambda: now[0],
         )
         llm.sleeps = sleeps
         return llm, fake
@@ -79,6 +91,7 @@ def api(session_factory, make_llm):
     from app.db import get_db, get_session_factory
     from app.llm.client import get_llm
     from app.main import app
+    from app.services.embeddings import get_embedder
 
     def build(script=()):
         llm, fake = make_llm(script)
@@ -90,7 +103,33 @@ def api(session_factory, make_llm):
         app.dependency_overrides[get_db] = db_override
         app.dependency_overrides[get_llm] = lambda: llm
         app.dependency_overrides[get_session_factory] = lambda: session_factory
+        app.dependency_overrides[get_embedder] = lambda: FakeEmbedder()
         return TestClient(app), fake
 
     yield build
     app.dependency_overrides.clear()
+
+
+class FakeEmbedder:
+    """Bag-of-words hashing embedder: deterministic, no model download. Shared words mean similarity."""
+
+    def ensure_loaded(self) -> None:
+        pass
+
+    def embed(self, texts):
+        import re
+        import zlib
+
+        import numpy as np
+
+        vectors = np.zeros((len(texts), 128), dtype=np.float32)
+        for row, text in enumerate(texts):
+            for word in re.findall(r"[a-z0-9+#.]+", text.lower()):
+                vectors[row, zlib.crc32(word.encode()) % 128] += 1.0
+        norms = np.linalg.norm(vectors, axis=1, keepdims=True)
+        return vectors / np.where(norms == 0, 1, norms)
+
+
+@pytest.fixture
+def embedder():
+    return FakeEmbedder()

@@ -1,0 +1,19 @@
+{
+  "_about": "Hand-written BEFORE the Matcher was run. Grade = how strong a fit this candidate is for the job (3 strong, 2 average, 1 partial/tricky, 0 not a fit). Candidates not listed for a job are grade 0.",
+  "backend": {
+    "01_aarav_mehta.pdf": 3,
+    "02_priya_nair.docx": 2,
+    "04_sneha_kulkarni.docx": 1,
+    "03_rohan_das.pdf": 0
+  },
+  "frontend": {
+    "05_kabir_singh.pdf": 3,
+    "06_ananya_iyer.docx": 2,
+    "07_vikram_joshi.pdf": 1
+  },
+  "data": {
+    "08_meera_reddy.docx": 3,
+    "09_arjun_patel.pdf": 2,
+    "10_divya_sharma.pdf": 1
+  }
+}

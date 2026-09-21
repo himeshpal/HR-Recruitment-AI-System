@@ -51,10 +51,38 @@ def test_retries_on_rate_limit_and_honours_retry_after(make_llm):
 
 
 def test_gives_up_after_max_attempts(make_llm):
-    llm, fake = make_llm([_rate_limit()] * 4)
-    with pytest.raises(LLMError, match="4 attempts"):
+    llm, _ = make_llm([])
+    attempts = llm.settings.llm_max_attempts
+    llm, fake = make_llm([_rate_limit()] * attempts)
+    with pytest.raises(LLMError, match=f"{attempts} attempts"):
         llm.chat(MSG, agent="t")
-    assert len(fake.completions.calls) == 4
+    assert len(fake.completions.calls) == attempts
+
+
+def test_wait_time_is_read_from_the_error_message_when_there_is_no_header(make_llm):
+    err = openai.RateLimitError(
+        "Rate limit reached ... Please try again in 12.3s. Need more tokens?",
+        response=httpx.Response(429, request=httpx.Request("POST", "http://x/v1")), body=None,
+    )
+    llm, _ = make_llm([err, "ok"])
+    assert llm.chat(MSG, agent="t").text == "ok"
+    assert llm.sleeps == [pytest.approx(12.8)]  # 12.3s from the message plus a 0.5s margin
+
+
+def test_one_rate_limit_pauses_every_thread_not_just_the_one_that_hit_it(make_llm):
+    import threading
+
+    llm, fake = make_llm([_rate_limit("5"), "a", "b"])
+    replies = []
+    first = llm.chat(MSG, agent="t", use_cache=False)  # hits the 429, waits 5s, succeeds
+    replies.append(first.text)
+    # a second caller starting now must respect the cooldown that is still in force, not hammer the API
+    llm._cooldown_until = llm._clock() + 3.0
+    worker = threading.Thread(target=lambda: replies.append(llm.chat([{"role": "user", "content": "2"}], agent="t").text))
+    worker.start()
+    worker.join()
+    assert replies == ["a", "b"]
+    assert llm.sleeps == [5.0, pytest.approx(3.0)]
 
 
 def test_bad_request_is_not_retried(make_llm):

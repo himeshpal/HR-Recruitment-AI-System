@@ -10,3 +10,4 @@ pdfplumber
 python-docx
 python-multipart
 fpdf2
+fastembed

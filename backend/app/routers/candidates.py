@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from pydantic import BaseModel
@@ -68,6 +69,21 @@ def upload_resume(file: UploadFile, db: Session = Depends(get_db),
         parsed_profile=profile.model_dump(), stage="applied",
     )
     db.add(candidate)
+    db.commit()
+    return _out(candidate)
+
+
+class StageUpdate(BaseModel):
+    stage: Literal["applied", "screened", "interview", "offer", "rejected"]
+
+
+@router.patch("/{candidate_id}/stage", response_model=CandidateOut)
+def set_stage(candidate_id: int, body: StageUpdate, db: Session = Depends(get_db)):
+    """Move a candidate along the hiring pipeline (used by the Kanban board)."""
+    candidate = db.get(Candidate, candidate_id)
+    if candidate is None:
+        raise HTTPException(404, "Candidate not found")
+    candidate.stage = body.stage
     db.commit()
     return _out(candidate)
 

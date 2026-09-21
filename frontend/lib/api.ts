@@ -44,6 +44,7 @@ function withJson(method: string, body?: unknown): RequestInit {
 export const postJson = <T>(path: string, body?: unknown, signal?: AbortSignal) =>
   apiFetch<T>(path, { ...withJson("POST", body), signal });
 export const putJson = <T>(path: string, body: unknown) => apiFetch<T>(path, withJson("PUT", body));
+export const patchJson = <T>(path: string, body: unknown) => apiFetch<T>(path, withJson("PATCH", body));
 export const del = (path: string) => apiFetch<void>(path, { method: "DELETE" });
 
 export type Health = {

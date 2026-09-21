@@ -1,0 +1,17 @@
+[
+  {
+    "key": "backend",
+    "title": "Backend Engineer (Phase 2 check)",
+    "markdown": "# Backend Engineer\n\n## About the role\nWe are hiring a Backend Engineer to build and run the REST APIs behind our product.\n\n## What you'll do\n- Design and build REST APIs in Python\n- Model data and tune queries in PostgreSQL\n- Package and deploy services with Docker\n- Review code and improve reliability\n\n## What you'll bring\n### Must have\n- 2+ years of professional backend experience\n- Python and FastAPI\n- PostgreSQL\n- Docker\n\n### Nice to have\n- AWS\n- Redis\n\n## What we offer\n- [Salary range]\n- [Location]\n\n## Equal opportunity\nWe welcome applicants of all backgrounds."
+  },
+  {
+    "key": "frontend",
+    "title": "Frontend Developer (Phase 2 check)",
+    "markdown": "# Frontend Developer\n\n## About the role\nWe are hiring a Frontend Developer to build the web interface of our product.\n\n## What you'll do\n- Build responsive user interfaces with React and TypeScript\n- Turn designs into accessible, fast pages\n- Write component tests\n- Work with backend engineers on APIs\n\n## What you'll bring\n### Must have\n- 3+ years of frontend development experience\n- React\n- TypeScript\n- JavaScript, HTML and CSS\n\n### Nice to have\n- Next.js\n- Jest\n\n## What we offer\n- [Salary range]\n\n## Equal opportunity\nWe welcome applicants of all backgrounds."
+  },
+  {
+    "key": "data",
+    "title": "Data Analyst (Phase 2 check)",
+    "markdown": "# Data Analyst\n\n## About the role\nWe are hiring a Data Analyst to turn business data into clear reports and dashboards. Freshers and people with up to two years of experience are welcome.\n\n## What you'll do\n- Query data with SQL\n- Build dashboards in Tableau or Power BI\n- Analyse trends in Excel\n- Present findings to managers\n\n## What you'll bring\n### Must have\n- SQL\n- Excel\n- A BI tool such as Tableau or Power BI\n\n### Nice to have\n- Python\n- Statistics\n\n## What we offer\n- [Salary range]\n\n## Equal opportunity\nWe welcome applicants of all backgrounds."
+  }
+]

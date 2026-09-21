@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowLeft, FileText, Loader2, Save, Sparkles } from "lucide-react";
+import { ArrowLeft, FileText, ListChecks, Loader2, Save, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 import { JdPreview } from "@/components/jd-preview";
@@ -10,7 +10,7 @@ import { LanguagePanel } from "@/components/language-panel";
 import { RequirementsPanel } from "@/components/requirements-panel";
 import { EmptyState, ErrorState } from "@/components/states";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -18,7 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { postJson, putJson } from "@/lib/api";
 import { applySuggestion } from "@/lib/language";
-import { streamSSE } from "@/lib/sse";
+import { streamSSE, type JdEvent } from "@/lib/sse";
 import type { Job, LanguageFlag } from "@/lib/types";
 import { useFetch } from "@/lib/use-fetch";
 
@@ -52,7 +52,7 @@ function StudioEditor({ job, autoGenerate }: { job: Job; autoGenerate: boolean }
   const runStream = useCallback(
     (previous: string, controller: AbortController) => {
       let finished = false;
-      streamSSE(
+      streamSSE<JdEvent>(
         `/api/jobs/${job.id}/generate`,
         (event) => {
           if (event.type === "token") {
@@ -185,6 +185,11 @@ function StudioEditor({ job, autoGenerate }: { job: Job; autoGenerate: boolean }
           </div>
           <div className="flex items-center gap-2">
             {dirty && <Badge variant="secondary">Unsaved changes</Badge>}
+            {saved.markdown.trim() && (
+              <Link href={`/screening/${job.id}`} className={buttonVariants({ variant: "outline" })}>
+                <ListChecks /> Screen candidates
+              </Link>
+            )}
             <Button variant="outline" onClick={regenerate} disabled={streaming || saving}>
               {streaming ? <Loader2 className="animate-spin" /> : <Sparkles />}
               {markdown ? "Regenerate" : "Generate"}
