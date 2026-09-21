@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowLeft, FileText, ListChecks, Loader2, Save, Sparkles } from "lucide-react";
+import { ArrowLeft, FileText, ListChecks, Loader2, MessagesSquare, Save, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 import { JdPreview } from "@/components/jd-preview";
@@ -186,9 +186,14 @@ function StudioEditor({ job, autoGenerate }: { job: Job; autoGenerate: boolean }
           <div className="flex items-center gap-2">
             {dirty && <Badge variant="secondary">Unsaved changes</Badge>}
             {saved.markdown.trim() && (
-              <Link href={`/screening/${job.id}`} className={buttonVariants({ variant: "outline" })}>
-                <ListChecks /> Screen candidates
-              </Link>
+              <>
+                <Link href={`/ask/${job.id}`} className={buttonVariants({ variant: "outline" })}>
+                  <MessagesSquare /> Candidate Q&amp;A
+                </Link>
+                <Link href={`/screening/${job.id}`} className={buttonVariants({ variant: "outline" })}>
+                  <ListChecks /> Screen candidates
+                </Link>
+              </>
             )}
             <Button variant="outline" onClick={regenerate} disabled={streaming || saving}>
               {streaming ? <Loader2 className="animate-spin" /> : <Sparkles />}

@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
 import { Search, Users } from "lucide-react";
 
@@ -12,10 +13,21 @@ import { UploadZone } from "@/components/upload-zone";
 import type { Candidate } from "@/lib/types";
 import { useFetch } from "@/lib/use-fetch";
 
-export function CandidatesView() {
+export function CandidatesView({ initialOpenId = null }: { initialOpenId?: number | null }) {
   const { state, reload, update } = useFetch<Candidate[]>("/api/candidates");
   const [query, setQuery] = useState("");
-  const [openId, setOpenId] = useState<number | null>(null);
+  const router = useRouter();
+  const [openId, setOpenId] = useState<number | null>(initialOpenId);
+  // Follow the address (/candidates?open=5), e.g. when an Ask HR result is chosen while this page is already showing.
+  const [seenId, setSeenId] = useState(initialOpenId);
+  if (initialOpenId !== seenId) {
+    setSeenId(initialOpenId);
+    if (initialOpenId !== null) setOpenId(initialOpenId);
+  }
+  const closeSheet = () => {
+    setOpenId(null);
+    if (initialOpenId !== null) router.replace("/candidates"); // so choosing the same result again opens it again
+  };
 
   const onUploaded = useCallback(
     (candidate: Candidate) => update((list) => [candidate, ...list.filter((c) => c.id !== candidate.id)]),
@@ -84,9 +96,9 @@ export function CandidatesView() {
 
       <CandidateSheet
         candidate={open}
-        onClose={() => setOpenId(null)}
+        onClose={closeSheet}
         onDeleted={(id) => {
-          setOpenId(null);
+          closeSheet();
           update((list) => list.filter((c) => c.id !== id));
         }}
       />

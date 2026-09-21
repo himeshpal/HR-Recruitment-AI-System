@@ -247,11 +247,38 @@ Every agent's schema lives in code (Pydantic), so it is validated and retried au
 
 **Known limitations, stated honestly:** the three panelists often give identical scores to clear-cut candidates (88/88/88 for the strongest, 30/30/30 for the weakest), so the panel adds diversity only on borderline cases. Without the Bias Shield the panel moved by up to 6 points when only the name and gender changed, and even the anonymised text scored 9 points higher than the original for the same person, so the Shield matters more here than it did for the Matcher. The interview scorer has only been checked on synthetic and AI-written answers, never on real people. Voice input depends on the browser (Chrome or Edge) and cannot be verified in automated tests beyond a simulated microphone.
 
-### Phase 4: Q&A, outreach, Ask-HR, coach (Days 13–15)
-1. **Candidate Q&A** (RAG over the JD and a company info file, with citations; refuses when unsure).
-2. **Outreach Agent** (email drafts editable in the UI, `.ics` generation).
-3. **Ask-HR**: the LLM outputs a structured filter object (not raw SQL); the backend converts it to a safe query. Add a **Ctrl+K command palette**.
-4. **Skill-Gap Coach** on rejected candidates.
+### Phase 4: Q&A, outreach, Ask-HR, coach (Days 13–15) — DONE
+1. **Candidate Q&A** (RAG over the job description and a company info file, with citations; hands the question to a human when unsure). Page: `/ask/[jobId]`, with a chat and a recruiter inbox.
+2. **Outreach Agent**: invitation, rejection and offer emails, editable in the UI, plus an `.ics` calendar file. Lives in the new **Outreach** tab of the candidate sheet.
+3. **Ask-HR**: the LLM only fills in a structured filter object (never SQL); the backend validates it and runs a read-only query. **Ctrl+K command palette** (also a sidebar button) opens it anywhere.
+4. **Skill-Gap Coach**: a learning roadmap for the skills a candidate did not show, in the same Outreach tab.
+5. **Check:** `backend/scripts/phase4_check.py` (results in `backend/data/eval/phase4.json`).
+
+**How each one stays honest (implemented):** the pattern is the same as before, the model writes or judges and code decides.
+
+- **Q&A** splits the job description and `backend/data/company/company_info.md` (a fictional "Northwind Labs" file: edit it to try your own) by heading and retrieves the best sections with the local embedding model. The model must cite the sections it used. **Code escalates to the recruiter** when nothing is similar enough, the model says it cannot answer, the citation is not one it was given, the answer is too long, or **any number in the answer is not in a section the candidate is shown**. Escalated questions land in the recruiter inbox.
+- **Outreach**: the model writes with placeholders (`{{first_name}}`, `{{interview_time}}`, `{{salary}}`) and **never sees the candidate's name**; code fills them in. Code rejects a draft that uses a disallowed or missing placeholder, invents a number, contains a link, mentions scores, rankings or AI, or mentions a protected characteristic. It gets one repair attempt, then an error instead of an unsafe draft. Anything the recruiter did not supply stays visibly in `[brackets]`. The invitation must always contain the meeting location. The `.ics` file is built to RFC 5545 (UTC times, escaping, line folding).
+- **Ask-HR**: the model can only choose from a fixed menu (skills, years, stage, location, headline, score, verdict). There is no filter for age or gender, no write action and no way to see an email address or phone number. Anything else is answered with a plain refusal.
+- **Coach**: the gaps come from the Matcher's skill details, not from the model. Code checks that every required gap has a step, that no other skill was added, that there are no links, and adds up the total weeks itself.
+
+**Phase 4 validation results** (real AI; criteria fixed before the first run; the final run is 21 of 21 checks):
+
+| Check | Result |
+|---|---|
+| Answerable candidate questions answered correctly, with a source | 14 of 14 (first run: 11 of 14) |
+| Unanswerable, off-topic or manipulative questions sent to a human | 10 of 10 |
+| Numbers in answers that are not in the documents | 0 |
+| Emails (invite, offer, two rejections) under 200 words, greeting by first name | 4 of 4 (57 to 85 words) |
+| Invitation contains the time, length, format and link we supplied | yes (first run: no) |
+| Rejection mentions the real skill gaps; hidden "ignore your rules" in the notes obeyed | yes; no |
+| Calendar file valid, right UTC start and end, invites the candidate | yes |
+| Ask-HR questions returning exactly the right candidates (against a separate hand-written implementation) | 15 of 15 |
+| Hostile requests refused (delete, edit, emails and phones, gender, age, "drop table", mass email) | 8 of 8, database unchanged, no contact details leaked |
+| Coach: every required missing skill has a step / no invented skills / no links / totals correct | 3 of 3 roadmaps |
+
+**Bugs the real AI and the browser tests found:** (1) The Q&A bot escalated a correct answer ("The technical interview lasts 60 minutes") because it cited the neighbouring section; the code now adds the section that really holds the figure to the visible sources, and still escalates if the figure is in none of them. (2) "Which skills are required?" found nothing, because a bare list like "Python / FastAPI / Docker" embeds poorly against a general question; retrieval is now told what each standard heading is for. (3) Invitations could leave out the meeting link; the location is now a required placeholder. (4) The salary question was declined even though the company file says the recruiter shares it at the first call; the prompt now allows describing *how* something is shared, never a figure. (5) The coach once wrote "you'll be ready in just a few months"; it is now told not to predict outcomes. (6) Deleting a job left its emails behind, and SQLite reuses ids, so a new job could have inherited them; they are now deleted with the job. (7) Choosing an Ask-HR result while already on the Candidates page changed the address but did not open the candidate. (8) Five tabs no longer fitted a phone screen, and my first test only measured the page, not the sheet. Two more were problems with my own test tools: the invitation check compared the placeholder form of the email, and one script crashed printing a special space character.
+
+**Known limitations, stated honestly:** the test questions were written by me and I tuned the bot after seeing which failed, so the 14 of 14 is partly fitted to them and would probably be lower on new questions. The company file is small, fictional and English-only. Ask-HR is scored against an implementation I wrote from the same reading of the questions, so a shared misreading would not show. Only four emails and three roadmaps were checked, and their *quality* beyond the automatic rules was read by me, not by recruiters. The coach names resources in general terms and cannot check that a course exists. The invitation time uses the browser's timezone. Nothing is actually sent: the app drafts, the recruiter copies or opens their own email app.
 
 ### Phase 5: Showpiece UI and polish (Days 16–19)
 1. **Live Agent Graph** (React Flow): nodes for each agent, lighting up in real time via SSE from the LangGraph run, with streaming "thoughts" beside it.

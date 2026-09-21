@@ -7,7 +7,9 @@ import { AlertTriangle, ArrowRight, Gavel, Loader2, MessageSquareText, Quote, Ro
 import { toast } from "sonner";
 
 import { Avatar } from "@/components/candidate-card";
+import { OutreachPanel } from "@/components/outreach-panel";
 import { LivePanel, PanelView } from "@/components/panel-view";
+import { RoadmapSection } from "@/components/roadmap-view";
 import { ResumeViewer } from "@/components/resume-viewer";
 import { ScoreRing, scoreBand } from "@/components/score-ring";
 import { SkillChip } from "@/components/skill-chip";
@@ -91,11 +93,13 @@ function SheetBody({ match, blind, onPanel }: { match: Match; blind: boolean; on
 
       <div className="flex-1 px-4 pb-6">
         <Tabs value={tab} onValueChange={(v) => setTab(String(v))}>
-          <TabsList>
-            <TabsTrigger value="evaluation" className="px-3">Evaluation</TabsTrigger>
-            <TabsTrigger value="panel" className="px-3">Panel</TabsTrigger>
-            <TabsTrigger value="interview" className="px-3">Interview</TabsTrigger>
-            <TabsTrigger value="resume" className="px-3">Resume</TabsTrigger>
+          {/* Five tabs: they share the row on a phone instead of pushing the sheet sideways. */}
+          <TabsList className="grid w-full grid-cols-5 sm:inline-flex sm:w-fit">
+            <TabsTrigger value="evaluation" className="px-1 text-xs sm:px-3 sm:text-sm">Evaluation</TabsTrigger>
+            <TabsTrigger value="panel" className="px-1 text-xs sm:px-3 sm:text-sm">Panel</TabsTrigger>
+            <TabsTrigger value="interview" className="px-1 text-xs sm:px-3 sm:text-sm">Interview</TabsTrigger>
+            <TabsTrigger value="outreach" className="px-1 text-xs sm:px-3 sm:text-sm">Outreach</TabsTrigger>
+            <TabsTrigger value="resume" className="px-1 text-xs sm:px-3 sm:text-sm">Resume</TabsTrigger>
           </TabsList>
 
           <TabsContent value="evaluation" className="space-y-6 pt-4">
@@ -165,6 +169,11 @@ function SheetBody({ match, blind, onPanel }: { match: Match; blind: boolean; on
 
           <TabsContent value="interview" className="pt-4">
             <InterviewTab match={match} />
+          </TabsContent>
+
+          <TabsContent value="outreach" className="space-y-6 pt-4">
+            <OutreachPanel match={match} blind={blind} />
+            <RoadmapSection match={match} />
           </TabsContent>
 
           <TabsContent value="resume" className="space-y-3 pt-4">

@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Briefcase, Kanban, LayoutDashboard, ListChecks, Sparkles, Users } from "lucide-react";
+import { Briefcase, Kanban, LayoutDashboard, ListChecks, Search, Sparkles, Users } from "lucide-react";
 
+import { OPEN_ASK_EVENT } from "@/components/ask-palette";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 
@@ -53,6 +54,15 @@ export function AppSidebar() {
             </Link>
           ))}
         </nav>
+        <button
+          type="button"
+          onClick={() => window.dispatchEvent(new Event(OPEN_ASK_EVENT))}
+          className="mb-3 flex items-center gap-2 rounded-lg border bg-background px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <Search className="size-4" />
+          <span className="flex-1">Ask HR</span>
+          <kbd className="rounded border bg-muted px-1.5 text-[10px] font-medium">Ctrl K</kbd>
+        </button>
         <div className="flex items-center justify-between border-t pt-3">
           <span className="text-xs text-muted-foreground">Theme</span>
           <ThemeToggle />
@@ -77,6 +87,14 @@ export function AppSidebar() {
               <Icon className="size-4" />
             </Link>
           ))}
+          <button
+            type="button"
+            aria-label="Ask HR"
+            onClick={() => window.dispatchEvent(new Event(OPEN_ASK_EVENT))}
+            className="rounded-lg p-2 text-muted-foreground transition-colors"
+          >
+            <Search className="size-4" />
+          </button>
           <ThemeToggle />
         </nav>
       </header>

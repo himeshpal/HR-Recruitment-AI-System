@@ -24,6 +24,11 @@ class Job(Base):
 
     matches: Mapped[list["Match"]] = relationship(back_populates="job", cascade="all, delete-orphan")
     interviews: Mapped[list["Interview"]] = relationship(back_populates="job", cascade="all, delete-orphan")
+    qa_entries: Mapped[list["QaEntry"]] = relationship(cascade="all, delete-orphan")
+    # messages.job_id has no database-level foreign key (it was added to an existing table), so the join is spelled out.
+    messages: Mapped[list["Message"]] = relationship(
+        primaryjoin="Job.id == foreign(Message.job_id)", cascade="all, delete-orphan", viewonly=False
+    )
 
 
 class Candidate(Base):
@@ -63,6 +68,7 @@ class Match(Base):
     skill_details: Mapped[list | None] = mapped_column(JSON, default=None)  # per-skill: demonstrated / listed / missing
     confidence: Mapped[float] = mapped_column(Float, default=0.0)
     dropped_quotes: Mapped[int] = mapped_column(Integer, default=0)  # evidence quotes rejected as not verbatim
+    roadmap: Mapped[dict | None] = mapped_column(JSON, default=None)  # Skill-Gap Coach learning plan
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
     job: Mapped[Job] = relationship(back_populates="matches")
@@ -109,9 +115,29 @@ class Message(Base):
     candidate_id: Mapped[int] = mapped_column(ForeignKey("candidates.id"))
     kind: Mapped[str] = mapped_column(String(20))  # invite | reject | offer
     body: Mapped[str] = mapped_column(Text, default="")
+    subject: Mapped[str] = mapped_column(Text, default="")
+    job_id: Mapped[int | None] = mapped_column(Integer, default=None)
+    status: Mapped[str] = mapped_column(String(20), default="draft")  # draft | sent (marked by the recruiter)
+    extra: Mapped[dict | None] = mapped_column(JSON, default=None)  # interview details for invites
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
     candidate: Mapped[Candidate] = relationship(back_populates="messages")
+
+
+class QaEntry(Base):
+    """One question a candidate asked about a job, and how the Q&A bot handled it."""
+
+    __tablename__ = "qa_entries"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    job_id: Mapped[int] = mapped_column(ForeignKey("jobs.id"))
+    question: Mapped[str] = mapped_column(Text)
+    answer: Mapped[str] = mapped_column(Text, default="")
+    sources: Mapped[list | None] = mapped_column(JSON, default=None)
+    escalated: Mapped[bool] = mapped_column(Boolean, default=False)  # passed to a human recruiter
+    reason: Mapped[str] = mapped_column(String(60), default="")
+    resolved: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
 
 class AgentRun(Base):

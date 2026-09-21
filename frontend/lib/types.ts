@@ -211,3 +211,74 @@ export type Interview = {
 };
 
 export type InterviewSummary = { id: number; status: string; created_at: string; overall: number | null };
+
+// ---- Phase 4: Q&A, outreach, Ask-HR, coach ----
+
+export type QaSource = { id: string; label: string; excerpt: string };
+
+export type QaEntry = {
+  id: number;
+  question: string;
+  answer: string;
+  sources: QaSource[];
+  escalated: boolean;
+  reason: string;
+  resolved: boolean;
+  created_at: string;
+};
+
+export type EmailKind = "invite" | "reject" | "offer";
+
+export type OutreachMessage = {
+  id: number;
+  candidate_id: number;
+  job_id: number | null;
+  kind: EmailKind;
+  status: "draft" | "sent";
+  subject: string; // {{first_name}} is still a placeholder here
+  body: string;
+  rendered_subject: string;
+  rendered_body: string;
+  unresolved_fields: string[];
+  has_ics: boolean;
+  candidate_email: string;
+  created_at: string;
+};
+
+export type AskRow = {
+  id: number;
+  name: string;
+  headline: string | null;
+  location: string | null;
+  years: number;
+  skills: string[];
+  stage: string;
+  score: number | null;
+  verdict: string | null;
+};
+
+export type AskResponse = {
+  understood: string | null;
+  refusal: string | null;
+  total: number;
+  results: AskRow[];
+  job: { id: number; title: string } | null;
+};
+
+export type RoadmapStep = {
+  skill: string;
+  priority: string;
+  why: string;
+  actions: string[];
+  practice_project: string;
+  weeks: number;
+  resources: { title: string; kind: string; search_terms: string }[];
+  milestone: string;
+};
+
+export type Roadmap = {
+  summary: string;
+  steps: RoadmapStep[];
+  total_weeks: number;
+  covers_all_required: boolean;
+};

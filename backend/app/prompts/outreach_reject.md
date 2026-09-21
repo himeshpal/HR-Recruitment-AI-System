@@ -1,0 +1,3 @@
+This email: a REJECTION after the application or interview.
+
+Thank the candidate sincerely for their time and interest in the role and the company. Say clearly and kindly that you will not be moving forward with their application for this role. Do not give any reason for the decision except the FEEDBACK POINTS below, if there are any. If there are feedback points, offer them gently as suggestions for growth, using only what they say, without adding to them. If there are none, do not explain the decision at all. Do not promise to keep their details, to contact them again, or to reconsider them. Wish them well.

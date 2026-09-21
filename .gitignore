@@ -14,3 +14,9 @@ backend/data/llm_cache/
 backend/data/chroma/
 backend/data/uploads/
 backend/data/models/
+
+# logs and local dev output
+*.log
+frontend/dev.log
+frontend/test-results/
+frontend/.next/
