@@ -1,0 +1,140 @@
+[
+  {
+    "file": "01_aarav_mehta.pdf",
+    "name": "Aarav Mehta",
+    "email": "aarav.mehta@example.com",
+    "level": "strong",
+    "target": "Backend Engineer",
+    "expected_years": 6.5,
+    "key_skills": [
+      "Python",
+      "FastAPI",
+      "PostgreSQL",
+      "Docker",
+      "AWS"
+    ]
+  },
+  {
+    "file": "02_priya_nair.docx",
+    "name": "Priya Nair",
+    "email": "priya.nair@example.com",
+    "level": "average",
+    "target": "Backend Engineer",
+    "expected_years": 3.0,
+    "key_skills": [
+      "Python",
+      "Django",
+      "MySQL",
+      "Flask"
+    ]
+  },
+  {
+    "file": "03_rohan_das.pdf",
+    "name": "Rohan Das",
+    "email": "rohan.das@example.com",
+    "level": "weak",
+    "target": "Backend Engineer",
+    "expected_years": 0.5,
+    "key_skills": [
+      "Python",
+      "HTML",
+      "CSS"
+    ]
+  },
+  {
+    "file": "04_sneha_kulkarni.docx",
+    "name": "Sneha Kulkarni",
+    "email": "sneha.kulkarni@example.com",
+    "level": "tricky",
+    "target": "Backend Engineer",
+    "expected_years": 5.0,
+    "key_skills": [
+      "Java",
+      "Spring Boot",
+      "Kafka",
+      "Oracle"
+    ]
+  },
+  {
+    "file": "05_kabir_singh.pdf",
+    "name": "Kabir Singh",
+    "email": "kabir.singh@example.com",
+    "level": "strong",
+    "target": "Frontend Developer",
+    "expected_years": 6.5,
+    "key_skills": [
+      "React",
+      "TypeScript",
+      "Next.js",
+      "JavaScript"
+    ]
+  },
+  {
+    "file": "06_ananya_iyer.docx",
+    "name": "Ananya Iyer",
+    "email": "ananya.iyer@example.com",
+    "level": "average",
+    "target": "Frontend Developer",
+    "expected_years": 2.0,
+    "key_skills": [
+      "React",
+      "JavaScript",
+      "Redux",
+      "CSS"
+    ]
+  },
+  {
+    "file": "07_vikram_joshi.pdf",
+    "name": "Vikram Joshi",
+    "email": "vikram.joshi@example.com",
+    "level": "tricky",
+    "target": "Frontend Developer",
+    "expected_years": 1.0,
+    "key_skills": [
+      "React",
+      "Node.js",
+      "MongoDB"
+    ]
+  },
+  {
+    "file": "08_meera_reddy.docx",
+    "name": "Meera Reddy",
+    "email": "meera.reddy@example.com",
+    "level": "strong",
+    "target": "Data Analyst",
+    "expected_years": 4.0,
+    "key_skills": [
+      "SQL",
+      "Python",
+      "Tableau",
+      "Excel",
+      "Pandas"
+    ]
+  },
+  {
+    "file": "09_arjun_patel.pdf",
+    "name": "Arjun Patel",
+    "email": "arjun.patel@example.com",
+    "level": "average",
+    "target": "Data Analyst",
+    "expected_years": 2.0,
+    "key_skills": [
+      "Excel",
+      "Power BI",
+      "SQL"
+    ]
+  },
+  {
+    "file": "10_divya_sharma.pdf",
+    "name": "Divya Sharma",
+    "email": "divya.sharma@example.com",
+    "level": "weak-with-injection",
+    "target": "Data Analyst",
+    "expected_years": 0.5,
+    "key_skills": [
+      "Excel",
+      "SQL",
+      "Python"
+    ]
+  }
+]

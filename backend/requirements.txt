@@ -1,0 +1,12 @@
+fastapi
+uvicorn[standard]
+sqlalchemy>=2.0
+pydantic>=2.7
+pydantic-settings>=2.3
+openai>=1.50
+httpx
+pytest
+pdfplumber
+python-docx
+python-multipart
+fpdf2

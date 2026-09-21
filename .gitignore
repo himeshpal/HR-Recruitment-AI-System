@@ -1,0 +1,15 @@
+# secrets
+.env
+.env.local
+
+# python
+backend/.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# runtime data
+backend/data/hr.db
+backend/data/llm_cache/
+backend/data/chroma/
+backend/data/uploads/
