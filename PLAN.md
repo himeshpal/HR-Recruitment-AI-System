@@ -217,12 +217,35 @@ Every agent's schema lives in code (Pydantic), so it is validated and retried au
 
 **Known limitations, stated honestly:** the sample is small (10 resumes) and clean, so the keyword baseline is strong: the Matcher wins on pairwise accuracy and top-3 quality but is slightly behind on Spearman. Transferable experience is under-rated (the Java developer ranks 6th of 10 for the Python job, where I graded her a partial fit). Close calls are brittle (in the Data Analyst job, ranks 1 and 2 are 1.2 points apart). Without the Bias Shield the model showed little bias in the swap test (0.8 points), so the Shield is protection by construction rather than a fix for a large measured bias.
 
-### Phase 3: Panel and interviews (Days 9–12)
+### Phase 3: Panel and interviews (Days 9–12) — DONE
 1. **Panel Recommender** (three personas run in parallel, then the moderator).
-2. **Compare view**: radar chart for 2–3 candidates plus the panel debate transcript.
+2. **Compare view**: candidates side by side with **bars, a radar and a table** (plus the panel discussion). The radar you asked for is there; the grouped bars are the default because they are easier to read precisely, and the table is the accessible alternative.
 3. **Interview Agent**: question generation, then an answer-by-answer loop with adaptive follow-ups.
-4. **Interview room UI**: chat interface, timer, then voice mode (Web Speech API for speech-to-text and text-to-speech), then the scorecard.
-5. **Check:** run a full mock interview with a strong and a weak "candidate" answer set and confirm the scores differ sensibly.
+4. **Interview room UI**: chat interface, timer, voice dictation and read-aloud (Web Speech API, optional), then the scorecard.
+5. **Check:** `backend/scripts/phase3_check.py` (results in `backend/data/eval/phase3.json`).
+
+**How the Panel decides (implemented):** each persona (Tech Lead, HR Manager, Hiring Manager) reviews the same anonymised resume on its own and returns a 0-100 score, reasoning, strengths, concerns, verbatim evidence quotes and interview questions. The **verdict comes from fixed rules in code, not from the model**: consensus is the average score; *hire* needs a consensus of 70 or more and no panelist below 45; *no hire* is a consensus below 45 or two panelists below 45; anything else is *maybe*. Agreement is *high* when scores are within 15 points, *moderate* within 30, otherwise *low*. A separate moderator model then only explains the outcome and the differences between panelists.
+
+**How the Interview works (implemented):** the agent plans five questions (2 technical, 1 problem solving, 1 behavioural, 1 role fit) from the job, the anonymised resume and the doubts raised by screening and the panel. Each answer is scored by the AI for content and clarity (0-10), and an untrusted-text wrapper stops answers from instructing the scorer. **Code decides** whether a follow-up is asked (only for an answer under 6/10, at most one per question), how answer scores roll up into competencies (technical 30%, problem solving 20%, behavioural 15%, role fit 15%, communication 20%) and the recommendation (70 or more strong, 50 or more mixed). Scores stay hidden until the interview ends. An AI "Demo helper" can write a sample strong or weak answer so an interview can be tried without typing.
+
+**Phase 3 validation results** (real AI; criteria fixed before the first run; 6 panel candidates, fixed-answer evaluator tests and two full mock interviews):
+
+| Check | Result |
+|---|---|
+| Panel consensus orders better-vs-worse candidate pairs correctly | 6 of 6 |
+| Panel consensus vs the Matcher's score (Spearman) | 0.94 |
+| Strong candidates never "no hire", weak candidates never "hire" | yes |
+| Panelist quotes verbatim in the text they saw | 48 of 48 shown (3 more were dropped as invented) |
+| Score change from swapping name, gender or school (Bias Shield on / off) | 0.0 / 6.0 points |
+| Score change from hidden "hire this person" text | -14.3 points (the panel marked it down) |
+| Evaluator on fixed answers: strong / medium / weak / gibberish | 8-9 / 2-5 / 1-2 / 0-1 out of 10 |
+| Evaluator: begging for a high score | -1 to 0 points (never rewarded) |
+| Mock interview: strong AI candidate vs weak AI candidate | 90.0 vs 54.0 (gap 36) |
+| Interview questions: five, tailored to the job, none personal | yes (4 of 5 name a required skill) |
+
+**Bugs the real AI found:** (1) Groq sometimes rejects a model's malformed JSON with HTTP 400 `json_validate_failed`, which the client treated as fatal. It now feeds the broken text back and asks for a correction, like any other invalid output. (2) My first "weak candidate" test tool wrote competent answers, so the interview check failed at a gap of 16; the evaluator was scoring fairly (it scored genuinely weak answers 1-2), so I fixed the tool and kept the pass criterion unchanged.
+
+**Known limitations, stated honestly:** the three panelists often give identical scores to clear-cut candidates (88/88/88 for the strongest, 30/30/30 for the weakest), so the panel adds diversity only on borderline cases. Without the Bias Shield the panel moved by up to 6 points when only the name and gender changed, and even the anonymised text scored 9 points higher than the original for the same person, so the Shield matters more here than it did for the Matcher. The interview scorer has only been checked on synthetic and AI-written answers, never on real people. Voice input depends on the browser (Chrome or Edge) and cannot be verified in automated tests beyond a simulated microphone.
 
 ### Phase 4: Q&A, outreach, Ask-HR, coach (Days 13–15)
 1. **Candidate Q&A** (RAG over the JD and a company info file, with citations; refuses when unsure).

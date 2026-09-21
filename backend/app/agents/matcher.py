@@ -85,7 +85,7 @@ def _split_evidence(evidence: list[Evidence], text: str) -> tuple[list[Evidence]
     return valid, invalid
 
 
-def _job_brief(title: str, req: JobRequirements) -> str:
+def job_brief(title: str, req: JobRequirements) -> str:
     return json.dumps(
         {
             "title": title,
@@ -119,7 +119,7 @@ def _review(job_title: str, req: JobRequirements, years: float, text: str, llm: 
         {
             "role": "user",
             "content": (
-                f"JOB\n{_job_brief(job_title, req)}\n\n"
+                f"JOB\n{job_brief(job_title, req)}\n\n"
                 f"VERIFIED FACTS\nTotal years of professional experience, calculated from the dates: {years}\n\n"
                 f"RESUME\n{wrap_untrusted('resume', text)}"
             ),

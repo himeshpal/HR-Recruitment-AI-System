@@ -3,7 +3,7 @@ import openai
 import pytest
 from pydantic import BaseModel
 
-from app.llm.client import LLMError, LLMValidationError
+from app.llm.client import LLMError, LLMJsonRejected, LLMValidationError
 from app.models import AgentRun
 
 MSG = [{"role": "user", "content": "hi"}]
@@ -163,4 +163,49 @@ def test_missing_api_key_gives_a_clear_error(tmp_path):
 
     llm = LLMClient(settings=Settings(llm_api_key="", llm_cache_dir=tmp_path, _env_file=None))
     with pytest.raises(LLMError, match="GROQ_API_KEY"):
+        llm.chat(MSG, agent="t")
+
+
+def _json_rejected(failed="{\"decision\": \"hire\", \"score\": 9"):
+    """What Groq answers when the model's JSON is malformed: HTTP 400, code json_validate_failed."""
+    response = httpx.Response(400, request=httpx.Request("POST", "http://x/v1"))
+    body = {"message": "Failed to generate JSON.", "type": "invalid_request_error", "code": "json_validate_failed",
+            "failed_generation": failed}
+    return openai.BadRequestError("Failed to generate JSON.", response=response, body=body)
+
+
+def test_malformed_json_rejected_by_the_provider_is_repaired_not_fatal(make_llm):
+    llm, fake = make_llm([_json_rejected(), '{"decision": "hire", "score": 9}'])
+    assert llm.chat_json(MSG, Verdict, agent="t") == Verdict(decision="hire", score=9)
+    retry = fake.completions.calls[1]["messages"]
+    assert retry[-2] == {"role": "assistant", "content": '{"decision": "hire", "score": 9'}  # the broken text is shown back
+    assert "malformed" in retry[-1]["content"]
+
+
+def test_the_error_body_may_be_nested_under_error(make_llm):
+    err = _json_rejected()
+    err.body = {"error": err.body}
+    llm, _ = make_llm([err, '{"decision": "hire", "score": 1}'])
+    assert llm.chat_json(MSG, Verdict, agent="t").score == 1
+
+
+def test_a_provider_that_keeps_rejecting_the_json_gives_up_with_a_clear_error(make_llm):
+    llm, fake = make_llm([_json_rejected()] * 3)
+    with pytest.raises(LLMValidationError):
+        llm.chat_json(MSG, Verdict, agent="t")
+    assert len(fake.completions.calls) == 3
+
+
+def test_other_bad_requests_stay_fatal_in_json_mode(make_llm):
+    response = httpx.Response(400, request=httpx.Request("POST", "http://x/v1"))
+    err = openai.BadRequestError("model not found", response=response, body={"code": "model_not_found"})
+    llm, fake = make_llm([err])
+    with pytest.raises(LLMError, match="400"):
+        llm.chat_json(MSG, Verdict, agent="t")
+    assert len(fake.completions.calls) == 1
+
+
+def test_plain_chat_reports_a_json_rejection_as_a_normal_llm_error(make_llm):
+    llm, _ = make_llm([_json_rejected()])
+    with pytest.raises(LLMJsonRejected):
         llm.chat(MSG, agent="t")

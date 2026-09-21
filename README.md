@@ -4,7 +4,7 @@ An AI agent-based hiring platform: agents write job descriptions, parse and scre
 
 See [PLAN.md](PLAN.md) for the full design, phases and validation plan.
 
-**Status:** Phases 0 to 2 are done: foundation, job descriptions and resume parsing, and candidate screening (Matcher with evidence, Bias Shield and blind mode, ranked screening board, Kanban pipeline). Next: panel review and interviews.
+**Status:** Phases 0 to 3 are done: foundation, job descriptions and resume parsing, candidate screening (Matcher with evidence, Bias Shield and blind mode, ranked screening board, Kanban pipeline), the three-persona Panel review with a moderator, the Compare view, and the AI interview with a scorecard. Next: candidate Q&A chatbot, outreach emails, Ask-HR and the live agent graph.
 
 ## Stack
 
@@ -40,8 +40,11 @@ cd backend  && .venv\Scripts\python -m pytest                 # fast, uses a fak
 cd backend  && .venv\Scripts\python scripts\llm_smoke.py      # real LLM call + cache check
 cd backend  && .venv\Scripts\python scripts\phase1_check.py   # real end-to-end check (backend must be running)
 cd backend  && .venv\Scripts\python scripts\phase2_check.py   # ranking, evidence, bias, injection checks (real LLM; slow the first time)
+cd backend  && .venv\Scripts\python scripts\phase3_check.py   # panel, interview evaluator and full mock interviews (real LLM; slow the first time)
 cd frontend && npx playwright test                            # browser tests (backend and frontend running)
 ```
+
+Voice dictation and reading questions aloud in the interview room use the browser's built-in speech features (best in Chrome or Edge). They are optional: typing always works.
 
 Note: the first screening run downloads a small (about 90 MB) embedding model into `backend/data/models`. Groq's free tier is rate-limited (about 8,000 tokens per minute), so screening many candidates for the first time takes a few minutes; results are cached afterwards.
 

@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy import select
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.agents.jd_generator import JobRequirements, extract_requirements
 from app.agents.matcher import WEIGHTS, MatchResult, match_candidate, quote_in_text
@@ -18,6 +18,7 @@ from app.llm.client import LLMClient, LLMError, get_llm
 from app.models import Candidate, Job, Match
 from app.services.anonymizer import anonymize_resume
 from app.services.embeddings import Embedder, get_embedder
+from app.services.panel_store import PanelSummary, summary_from_rows
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["screening"])
@@ -61,6 +62,7 @@ class MatchOut(BaseModel):
     skill_details: list[SkillDetailOut]
     evidence: list[EvidenceOut]
     candidate: CandidateBrief
+    panel: PanelSummary | None = None  # set once the panel has reviewed this candidate
 
 
 class MatchDetail(MatchOut):
@@ -83,6 +85,7 @@ def _match_out(m: Match, candidate: Candidate) -> dict:
         "confidence": m.confidence or 0.0, "dropped_quotes": m.dropped_quotes or 0,
         "skill_details": m.skill_details or [], "evidence": m.evidence or [],
         "candidate": _brief(candidate),
+        "panel": summary_from_rows(m.panel_reviews),
     }
 
 
@@ -213,7 +216,7 @@ def list_matches(job_id: int, db: Session = Depends(get_db)):
     if db.get(Job, job_id) is None:
         raise HTTPException(404, "Job not found")
     rows = db.scalars(
-        select(Match).where(Match.job_id == job_id).options(joinedload(Match.candidate))
+        select(Match).where(Match.job_id == job_id).options(joinedload(Match.candidate), selectinload(Match.panel_reviews))
         .order_by(Match.overall_score.desc(), Match.id)
     )
     return [_match_out(m, m.candidate) for m in rows]

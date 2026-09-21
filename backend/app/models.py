@@ -23,6 +23,7 @@ class Job(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
     matches: Mapped[list["Match"]] = relationship(back_populates="job", cascade="all, delete-orphan")
+    interviews: Mapped[list["Interview"]] = relationship(back_populates="job", cascade="all, delete-orphan")
 
 
 class Candidate(Base):
@@ -92,9 +93,13 @@ class Interview(Base):
     job_id: Mapped[int] = mapped_column(ForeignKey("jobs.id"))
     transcript: Mapped[list | None] = mapped_column(JSON, default=None)
     scorecard: Mapped[dict | None] = mapped_column(JSON, default=None)
+    status: Mapped[str] = mapped_column(String(20), default="in_progress")  # in_progress | completed
+    questions: Mapped[list | None] = mapped_column(JSON, default=None)  # the planned questions, with answer keys
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
 
     candidate: Mapped[Candidate] = relationship(back_populates="interviews")
+    job: Mapped[Job] = relationship(back_populates="interviews")
 
 
 class Message(Base):

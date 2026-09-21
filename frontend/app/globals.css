@@ -129,3 +129,15 @@
     @apply font-sans;
   }
 }
+/* Chart series colours: the first three slots of the validated categorical palette
+   (checked for colour-blind separation in both modes; dark uses its own steps). */
+.viz-root {
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+}
+.dark .viz-root {
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+}

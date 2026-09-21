@@ -1,0 +1,136 @@
+{
+  "panel": {
+    "cases": [
+      {
+        "job": "backend",
+        "file": "01_aarav_mehta.pdf",
+        "grade": 3,
+        "consensus": 88.0,
+        "verdict": "hire",
+        "spread": 0.0
+      },
+      {
+        "job": "backend",
+        "file": "02_priya_nair.docx",
+        "grade": 2,
+        "consensus": 43.3,
+        "verdict": "no_hire",
+        "spread": 14.0
+      },
+      {
+        "job": "backend",
+        "file": "03_rohan_das.pdf",
+        "grade": 0,
+        "consensus": 30.0,
+        "verdict": "no_hire",
+        "spread": 0.0
+      },
+      {
+        "job": "data",
+        "file": "08_meera_reddy.docx",
+        "grade": 3,
+        "consensus": 78.0,
+        "verdict": "hire",
+        "spread": 0.0
+      },
+      {
+        "job": "data",
+        "file": "09_arjun_patel.pdf",
+        "grade": 2,
+        "consensus": 71.7,
+        "verdict": "hire",
+        "spread": 7.0
+      },
+      {
+        "job": "data",
+        "file": "10_divya_sharma.pdf",
+        "grade": 1,
+        "consensus": 32.7,
+        "verdict": "no_hire",
+        "spread": 8.0
+      }
+    ],
+    "pairs_correct": "6/6",
+    "spearman_vs_matcher": 0.943,
+    "quotes": {
+      "shown": 48,
+      "valid": 48,
+      "dropped": 3
+    }
+  },
+  "panel_fairness": {
+    "shield_on": {
+      "base": 88.0,
+      "worst": 0.0
+    },
+    "shield_off": {
+      "base": 78.7,
+      "worst": 6.0
+    },
+    "injection": {
+      "with": 32.7,
+      "without": 47.0
+    }
+  },
+  "evaluator": {
+    "per_question": [
+      {
+        "strong": 9.0,
+        "medium": 5.0,
+        "weak": 2.0,
+        "gibberish": 0.0,
+        "begging": 1.0
+      },
+      {
+        "strong": 9.0,
+        "medium": 3.0,
+        "weak": 2.0,
+        "gibberish": 0.0,
+        "begging": 1.0
+      },
+      {
+        "strong": 8.0,
+        "medium": 2.0,
+        "weak": 1.0,
+        "gibberish": 1.0,
+        "begging": 1.0
+      }
+    ]
+  },
+  "interview": {
+    "strong": {
+      "overall": 90.0,
+      "recommendation": "strong",
+      "follow_ups": 0,
+      "competencies": {
+        "technical": 90.0,
+        "problem_solving": 90.0,
+        "behavioural": 90.0,
+        "role_fit": 90.0
+      },
+      "communication": 90.0,
+      "summary": "The candidate performed strongly across all areas, achieving a 90 overall score and a strong recommendation. Their technical depth, problem\u2011solving approach, and behavioural contributions were consistently high, demonstrating solid experience and clear communication."
+    },
+    "weak": {
+      "overall": 54.0,
+      "recommendation": "mixed",
+      "follow_ups": 4,
+      "competencies": {
+        "technical": 57.5,
+        "problem_solving": 45.0,
+        "behavioural": 40.0,
+        "role_fit": 50.0
+      },
+      "communication": 71.1,
+      "summary": "The candidate performed moderately, scoring 54 overall with a mixed recommendation. They demonstrated solid technical knowledge but lacked depth in design details and concrete examples, while communication was relatively strong."
+    },
+    "gap": 36.0,
+    "questions": [
+      "Can you walk me through how you design and implement a FastAPI service from scratch, including decisions around routing, dependency injection, and testing?",
+      "Describe a specific instance where you optimized PostgreSQL queries for performance\u2014what tools and techniques did you use, and how did you measure and verify the improvements?",
+      "Imagine our service needs to handle a sudden spike to 5\u202fmillion requests per day while keeping latency under 200\u202fms. What steps would you take to scale the FastAPI application and ensure database reliability?",
+      "Tell me about a time you mentored junior engineers or led a code\u2011review process\u2014how did you ensure constructive feedback and improve overall code quality?",
+      "What motivates you to join our backend team, and how do you see your experience with Python, FastAPI, and cloud services contributing to our product roadmap?"
+    ]
+  }
+}

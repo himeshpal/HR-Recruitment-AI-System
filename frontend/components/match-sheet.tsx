@@ -1,10 +1,13 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useState } from "react";
-import { AlertTriangle, ArrowRight, Quote, ThumbsUp } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useCallback, useState } from "react";
+import { AlertTriangle, ArrowRight, Gavel, Loader2, MessageSquareText, Quote, RotateCw, ThumbsUp } from "lucide-react";
+import { toast } from "sonner";
 
 import { Avatar } from "@/components/candidate-card";
+import { LivePanel, PanelView } from "@/components/panel-view";
 import { ResumeViewer } from "@/components/resume-viewer";
 import { ScoreRing, scoreBand } from "@/components/score-ring";
 import { SkillChip } from "@/components/skill-chip";
@@ -13,10 +16,14 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
+import { VerdictBadge } from "@/components/verdict-badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { postJson } from "@/lib/api";
 import { displayName } from "@/lib/blind";
-import type { Match, MatchDetail, ScoreParts } from "@/lib/types";
+import { formatDate } from "@/lib/format";
+import type { Interview, InterviewSummary, Match, MatchDetail, Panel, ScoreParts } from "@/lib/types";
 import { useFetch } from "@/lib/use-fetch";
+import { usePanelRun } from "@/lib/use-panel-run";
 import { cn } from "@/lib/utils";
 
 const PARTS: { key: ScoreParts; label: string; help: string }[] = [
@@ -28,17 +35,27 @@ const PARTS: { key: ScoreParts; label: string; help: string }[] = [
 
 type View = "ai" | "original" | "both";
 
-export function MatchSheet({ match, blind, onClose }: { match: Match | null; blind: boolean; onClose: () => void }) {
+export function MatchSheet({
+  match,
+  blind,
+  onClose,
+  onPanel,
+}: {
+  match: Match | null;
+  blind: boolean;
+  onClose: () => void;
+  onPanel?: (panel: Panel) => void;
+}) {
   return (
     <Sheet open={match !== null} onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="w-full overflow-y-auto data-[side=right]:sm:max-w-2xl">
-        {match && <SheetBody key={match.id} match={match} blind={blind} />}
+        {match && <SheetBody key={match.id} match={match} blind={blind} onPanel={onPanel} />}
       </SheetContent>
     </Sheet>
   );
 }
 
-function SheetBody({ match, blind }: { match: Match; blind: boolean }) {
+function SheetBody({ match, blind, onPanel }: { match: Match; blind: boolean; onPanel?: (panel: Panel) => void }) {
   const detail = useFetch<MatchDetail>(`/api/matches/${match.id}`);
   const [tab, setTab] = useState("evaluation");
   const [view, setView] = useState<View>("ai");
@@ -68,6 +85,7 @@ function SheetBody({ match, blind }: { match: Match; blind: boolean }) {
           <p className="text-xs text-muted-foreground">
             <span className="font-medium text-foreground">{band.label}</span> · AI confidence {Math.round(match.confidence * 100)}%
           </p>
+          {match.panel && <VerdictBadge verdict={match.panel.verdict} className="mt-1" />}
         </div>
       </SheetHeader>
 
@@ -75,6 +93,8 @@ function SheetBody({ match, blind }: { match: Match; blind: boolean }) {
         <Tabs value={tab} onValueChange={(v) => setTab(String(v))}>
           <TabsList>
             <TabsTrigger value="evaluation" className="px-3">Evaluation</TabsTrigger>
+            <TabsTrigger value="panel" className="px-3">Panel</TabsTrigger>
+            <TabsTrigger value="interview" className="px-3">Interview</TabsTrigger>
             <TabsTrigger value="resume" className="px-3">Resume</TabsTrigger>
           </TabsList>
 
@@ -137,6 +157,14 @@ function SheetBody({ match, blind }: { match: Match; blind: boolean }) {
                 {match.dropped_quotes > 0 && `; ${match.dropped_quotes} quote(s) it cited were removed because they were not exact`}.
               </p>
             </section>
+          </TabsContent>
+
+          <TabsContent value="panel" className="pt-4">
+            <PanelTab match={match} onPanel={onPanel} />
+          </TabsContent>
+
+          <TabsContent value="interview" className="pt-4">
+            <InterviewTab match={match} />
           </TabsContent>
 
           <TabsContent value="resume" className="space-y-3 pt-4">
@@ -253,3 +281,104 @@ function Bullets({ title, icon: Icon, items, tone }: { title: string; icon: type
   );
 }
 
+
+function PanelTab({ match, onPanel }: { match: Match; onPanel?: (panel: Panel) => void }) {
+  const saved = useFetch<Panel | null>(`/api/matches/${match.id}/panel`);
+  const { update } = saved;
+  const handle = useCallback(
+    (panel: Panel) => {
+      update(() => panel);
+      onPanel?.(panel);
+    },
+    [update, onPanel],
+  );
+  const { running, status, live, run } = usePanelRun(handle);
+  const start = () => run(`/api/matches/${match.id}/panel`);
+
+  if (running) return <LivePanel reviews={live[match.id] ?? []} status={status} />;
+  if (saved.state.status === "loading") return <Skeleton className="h-48 rounded-xl" />;
+  if (saved.state.status === "error") return <ErrorState message={saved.state.message} onRetry={saved.reload} />;
+
+  const panel = saved.state.data;
+  if (!panel) {
+    return (
+      <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed px-6 py-10 text-center">
+        <span className="flex size-11 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <Gavel className="size-5" />
+        </span>
+        <div className="space-y-1">
+          <p className="font-medium">No panel review yet</p>
+          <p className="max-w-sm text-sm text-muted-foreground">
+            A Tech Lead, an HR Manager and a Hiring Manager review this candidate independently, then a moderator explains where they agree and differ.
+          </p>
+        </div>
+        <Button onClick={start}>
+          <Gavel /> Run panel review
+        </Button>
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-3">
+      <PanelView panel={panel} />
+      <Button variant="outline" size="sm" onClick={start}>
+        <RotateCw /> Run the panel again
+      </Button>
+    </div>
+  );
+}
+
+function InterviewTab({ match }: { match: Match }) {
+  const router = useRouter();
+  const past = useFetch<InterviewSummary[]>(`/api/interviews?candidate_id=${match.candidate.id}&job_id=${match.job_id}`);
+  const [starting, setStarting] = useState(false);
+
+  async function start() {
+    setStarting(true);
+    try {
+      const interview = await postJson<Interview>("/api/interviews", { candidate_id: match.candidate.id, job_id: match.job_id });
+      router.push(`/interview/${interview.id}`);
+    } catch (err) {
+      toast.error((err as Error).message);
+      setStarting(false);
+    }
+  }
+
+  const unfinished = past.state.status === "ready" && past.state.data.some((i) => i.status === "in_progress");
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col items-start gap-3 rounded-xl border p-4">
+        <div className="space-y-1">
+          <p className="flex items-center gap-2 font-medium">
+            <MessageSquareText className="size-4 text-primary" /> AI interview
+          </p>
+          <p className="text-sm text-muted-foreground">
+            The Interview agent writes five questions for this job and this candidate&apos;s gaps, asks a follow-up when an answer is thin, and produces a scorecard.
+          </p>
+        </div>
+        <Button onClick={start} disabled={starting}>
+          {starting ? <Loader2 className="animate-spin" /> : <MessageSquareText />}
+          {starting ? "Preparing questions…" : unfinished ? "Resume interview" : "Start interview"}
+        </Button>
+      </div>
+
+      {past.state.status === "ready" && past.state.data.length > 0 && (
+        <section className="space-y-2">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Previous interviews</h3>
+          <ul className="space-y-1.5">
+            {past.state.data.map((i) => (
+              <li key={i.id}>
+                <a href={`/interview/${i.id}`} className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm hover:bg-muted/50">
+                  <span>
+                    {formatDate(i.created_at)} · {i.status === "completed" ? "Completed" : "In progress"}
+                  </span>
+                  {i.overall !== null && <span className="font-semibold tabular-nums">{Math.round(i.overall)}</span>}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+    </div>
+  );
+}

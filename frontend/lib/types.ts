@@ -116,6 +116,7 @@ export type Match = {
   skill_details: SkillDetail[];
   evidence: Evidence[];
   candidate: CandidateBrief;
+  panel: PanelSummary | null;
 };
 
 export type MatchDetail = Match & { resume_text: string; anonymized_text: string };
@@ -128,3 +129,85 @@ export type ScreenEvent =
   | { type: "candidate_error"; candidate_id: number; message: string }
   | { type: "error"; message: string }
   | { type: "done"; matched: number; failed: number };
+
+// ---- Panel review (Phase 3) ----
+
+export type Verdict = "hire" | "maybe" | "no_hire";
+
+export type PanelSummary = {
+  verdict: Verdict;
+  consensus_score: number;
+  agreement: "high" | "moderate" | "low";
+};
+
+export type PersonaReview = {
+  persona: string;
+  label: string;
+  score: number;
+  stance: Verdict;
+  reasoning: string;
+  strengths: string[];
+  concerns: string[];
+  evidence: { claim: string; quote: string }[];
+  probe_questions: string[];
+  dropped_quotes: number;
+};
+
+export type Panel = PanelSummary & {
+  match_id: number;
+  spread: number;
+  summary: string;
+  disagreements: { topic: string; detail: string }[];
+  key_risks: string[];
+  next_step: string;
+  probe_questions: string[];
+  reviews: PersonaReview[];
+};
+
+export type PanelEvent =
+  | { type: "panel_start"; match_id: number; index: number; total: number }
+  | { type: "persona"; match_id: number; review: PersonaReview }
+  | { type: "status"; match_id: number; message: string }
+  | { type: "panel"; match_id: number; panel: Panel }
+  | { type: "panel_error"; match_id: number; message: string }
+  | { type: "done"; completed: number; failed: number };
+
+// ---- Interviews (Phase 3) ----
+
+export type InterviewTurn = {
+  role: "interviewer" | "candidate";
+  kind: "question" | "follow_up" | "answer";
+  question_index: number;
+  text: string;
+  content_score: number | null;
+  clarity_score: number | null;
+  feedback: string | null;
+};
+
+export type Scorecard = {
+  overall: number;
+  recommendation: "strong" | "mixed" | "weak";
+  competencies: Record<string, number>;
+  communication: number | null;
+  weights: Record<string, number>;
+  questions: { index: number; text: string; competency: string; score: number; follow_up_asked: boolean; feedback: string }[];
+  summary: string;
+  strengths: string[];
+  concerns: string[];
+  duration_seconds: number | null;
+};
+
+export type Interview = {
+  id: number;
+  job_id: number;
+  job_title: string;
+  candidate: { id: number; name: string; headline: string | null };
+  status: "in_progress" | "completed";
+  turns: InterviewTurn[];
+  progress: { current_question: number; total_questions: number; finished: boolean };
+  scorecard: Scorecard | null;
+  created_at: string;
+  completed_at: string | null;
+};
+
+export type InterviewSummary = { id: number; status: string; created_at: string; overall: number | null };

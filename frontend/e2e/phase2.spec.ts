@@ -1,59 +1,6 @@
-import fs from "node:fs";
-import path from "node:path";
+import { expect, test } from "@playwright/test";
 
-import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
-
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-const BACKEND = path.resolve(__dirname, "../../backend/data");
-const SHOTS = process.env.SHOTS_DIR;
-
-type Truth = { file: string; name: string; email: string };
-const truth: Truth[] = JSON.parse(fs.readFileSync(path.join(BACKEND, "sample_resumes/ground_truth.json"), "utf8"));
-const backendJob = JSON.parse(fs.readFileSync(path.join(BACKEND, "golden/jobs.json"), "utf8")).find(
-  (j: { key: string }) => j.key === "backend",
-) as { title: string; markdown: string };
-const AARAV = truth.find((t) => t.file.includes("aarav"))!;
-
-async function shot(page: Page, name: string) {
-  if (!SHOTS) return;
-  await page.waitForTimeout(900); // let springs and count-ups settle
-  await page.screenshot({ path: path.join(SHOTS, `${name}.png`) });
-}
-
-/** Make sure all 10 sample candidates exist (a phase 1 test deletes some); returns email -> id. */
-async function ensureCandidates(request: APIRequestContext): Promise<Map<string, number>> {
-  const existing = new Map<string, number>(
-    ((await (await request.get(`${API}/api/candidates`)).json()) as { email: string; id: number }[]).map((c) => [c.email, c.id]),
-  );
-  for (const t of truth) {
-    if (existing.has(t.email)) continue;
-    const response = await request.post(`${API}/api/candidates/upload`, {
-      multipart: { file: { name: t.file, mimeType: "application/octet-stream", buffer: fs.readFileSync(path.join(BACKEND, "sample_resumes", t.file)) } },
-    });
-    expect(response.ok(), `uploading ${t.file}`).toBeTruthy();
-    existing.set(t.email, (await response.json()).id);
-  }
-  return existing;
-}
-
-/**
- * A fresh, not-yet-screened copy of the backend job. It deliberately uses the same title and text as the
- * validation script, so the AI answers are already cached and the test is fast and free.
- */
-async function freshJob(request: APIRequestContext): Promise<number> {
-  for (const job of (await (await request.get(`${API}/api/jobs`)).json()) as { id: number; title: string }[]) {
-    if (job.title === backendJob.title) await request.delete(`${API}/api/jobs/${job.id}`);
-  }
-  const created = await (await request.post(`${API}/api/jobs`, { data: { title: backendJob.title, brief: "backend" } })).json();
-  await request.put(`${API}/api/jobs/${created.id}`, { data: { markdown: backendJob.markdown } });
-  return created.id;
-}
-
-async function screenViaApi(request: APIRequestContext, jobId: number) {
-  const response = await request.post(`${API}/api/jobs/${jobId}/screen`, { timeout: 600_000 });
-  expect(response.ok()).toBeTruthy();
-  expect(await response.text()).toContain('"type": "done"');
-}
+import { AARAV, API, ensureCandidates, freshJob, screenViaApi, shot } from "./helpers";
 
 test("screening: run it from the UI, see a ranked board, blind mode hides identity", async ({ page, request }) => {
   test.setTimeout(600_000);

@@ -49,6 +49,25 @@ class LLMValidationError(LLMError):
     """The model kept returning output that does not match the requested schema."""
 
 
+class LLMJsonRejected(LLMError):
+    """The provider refused the model's JSON as malformed (Groq: HTTP 400 json_validate_failed).
+
+    Transient: the model only needs another go, so JSON callers repair it like any other invalid output.
+    """
+
+    def __init__(self, message: str, failed_generation: str = ""):
+        super().__init__(message)
+        self.failed_generation = failed_generation
+
+
+def _json_rejection(exc: Exception) -> tuple[bool, str]:
+    """(is this a json_validate_failed rejection?, the malformed text the model produced)"""
+    body = getattr(exc, "body", None)
+    data = body if isinstance(body, dict) else {}
+    data = data.get("error", data) if isinstance(data.get("error", data), dict) else data
+    return data.get("code") == "json_validate_failed", str(data.get("failed_generation") or "")
+
+
 @dataclass
 class LLMResult:
     text: str
@@ -133,6 +152,9 @@ class LLMClient:
                 else:
                     self._sleep(delay)
             except openai.APIStatusError as exc:
+                rejected, failed_generation = _json_rejection(exc)
+                if rejected:
+                    raise LLMJsonRejected(f"The model produced malformed JSON: {exc.message}", failed_generation) from exc
                 raise LLMError(f"LLM request rejected ({exc.status_code}): {exc.message}") from exc
         raise AssertionError("unreachable")
 
@@ -239,7 +261,16 @@ class LLMClient:
         for _ in range(max_repairs + 1):
             kwargs = self._request_kwargs(convo, model, temperature, max_tokens, reasoning_effort)
             kwargs["response_format"] = {"type": "json_object"}
-            resp = self._with_retries(lambda: self.client.chat.completions.create(**kwargs))
+            try:
+                resp = self._with_retries(lambda: self.client.chat.completions.create(**kwargs))
+            except LLMJsonRejected as exc:
+                last_error = "the JSON was malformed (unbalanced brackets or quotes)"
+                convo = [*convo,
+                         *([{"role": "assistant", "content": exc.failed_generation}] if exc.failed_generation else []),
+                         {"role": "user",
+                          "content": f"That reply was invalid: {last_error}.\n"
+                                     "Reply again with only the corrected JSON object."}]
+                continue
             raw = resp.choices[0].message.content or ""
             total_tokens += resp.usage.total_tokens if resp.usage else 0
             try:

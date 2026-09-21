@@ -3,10 +3,11 @@
 import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowLeft, FileText, Loader2, RotateCw, Scale, Sparkles, TriangleAlert } from "lucide-react";
+import { ArrowLeft, FileText, Gavel, GitCompareArrows, Loader2, RotateCw, Scale, Sparkles, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 
 import { BlindToggle } from "@/components/blind-toggle";
+import { LivePanel } from "@/components/panel-view";
 import { MatchCard } from "@/components/match-card";
 import { MatchSheet } from "@/components/match-sheet";
 import { SkillLegend } from "@/components/skill-chip";
@@ -16,8 +17,9 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { displayName, useBlind } from "@/lib/blind";
 import { streamSSE } from "@/lib/sse";
-import type { Job, Match, ScreenEvent } from "@/lib/types";
+import type { Job, Match, Panel, ScreenEvent } from "@/lib/types";
 import { useFetch } from "@/lib/use-fetch";
+import { usePanelRun } from "@/lib/use-panel-run";
 
 const byScore = (a: Match, b: Match) => b.overall_score - a.overall_score || a.id - b.id;
 
@@ -38,6 +40,7 @@ function Board({ job, initial }: { job: Job; initial: Match[] }) {
   const blind = useBlind();
   const [matches, setMatches] = useState<Match[]>(() => [...initial].sort(byScore));
   const [openId, setOpenId] = useState<number | null>(null);
+  const [selected, setSelected] = useState<number[]>([]); // match ids picked for the Compare view
   const [running, setRunning] = useState(false);
   const [status, setStatus] = useState("");
   const [progress, setProgress] = useState<Progress | null>(null);
@@ -45,6 +48,15 @@ function Board({ job, initial }: { job: Job; initial: Match[] }) {
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => () => abortRef.current?.abort(), []);
+
+  // When the panel finishes for a candidate, show their verdict on the card straight away.
+  const onPanel = useCallback((panel: Panel) => {
+    const summary = { verdict: panel.verdict, consensus_score: panel.consensus_score, agreement: panel.agreement };
+    setMatches((prev) => prev.map((m) => (m.id === panel.match_id ? { ...m, panel: summary } : m)));
+  }, []);
+  const panelRun = usePanelRun(onPanel);
+  const toggleSelected = (id: number) =>
+    setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : prev.length < 3 ? [...prev, id] : prev));
 
   const run = useCallback(
     (force: boolean) => {
@@ -130,6 +142,10 @@ function Board({ job, initial }: { job: Job; initial: Match[] }) {
             <Button variant="outline" onClick={() => run(true)} disabled={running || !hasDescription || matches.length === 0}>
               <RotateCw /> Re-score all
             </Button>
+            <Button variant="outline" onClick={() => panelRun.run(`/api/jobs/${job.id}/panel?top=3`)} disabled={running || panelRun.running || matches.length === 0}>
+              {panelRun.running ? <Loader2 className="animate-spin" /> : <Gavel />}
+              Panel review (top 3)
+            </Button>
             <Button onClick={() => run(false)} disabled={running || !hasDescription}>
               {running ? <Loader2 className="animate-spin" /> : <Sparkles />}
               Screen candidates
@@ -160,6 +176,20 @@ function Board({ job, initial }: { job: Job; initial: Match[] }) {
           <p className="text-xs text-muted-foreground">
             Results appear as they finish. The free AI plan is rate-limited, so a large batch can take a few minutes.
           </p>
+        </div>
+      )}
+
+      {panelRun.running && (
+        <div className="space-y-2 rounded-xl border bg-card p-4">
+          <p className="flex items-center gap-2 text-sm font-medium" role="status">
+            <Loader2 className="size-4 animate-spin text-primary" /> {panelRun.status}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Three panelists review each of the best candidates independently, then a moderator writes the summary. Verdicts appear on the cards as they finish.
+          </p>
+          {Object.entries(panelRun.live).map(([id, reviews]) => (
+            <LivePanel key={id} reviews={reviews} status="" />
+          ))}
         </div>
       )}
 
@@ -213,14 +243,41 @@ function Board({ job, initial }: { job: Job; initial: Match[] }) {
           <ul className="space-y-3">
             <AnimatePresence initial={false}>
               {matches.map((match, index) => (
-                <MatchCard key={match.id} match={match} rank={index + 1} blind={blind} onOpen={() => setOpenId(match.id)} />
+                <MatchCard
+                  key={match.id}
+                  match={match}
+                  rank={index + 1}
+                  blind={blind}
+                  onOpen={() => setOpenId(match.id)}
+                  selected={selected.includes(match.id)}
+                  selectDisabled={selected.length >= 3}
+                  onToggleSelect={() => toggleSelected(match.id)}
+                />
               ))}
             </AnimatePresence>
           </ul>
         </section>
       )}
 
-      <MatchSheet match={open} blind={blind} onClose={() => setOpenId(null)} />
+      {selected.length > 0 && (
+        <div className="sticky bottom-4 z-20 mx-auto flex w-fit items-center gap-3 rounded-full border bg-background/95 px-4 py-2 shadow-lg backdrop-blur" role="region" aria-label="Compare selection">
+          <span className="text-sm">
+            <span className="font-semibold tabular-nums">{selected.length}</span> selected
+          </span>
+          <Button variant="ghost" size="xs" onClick={() => setSelected([])}>
+            Clear
+          </Button>
+          <Link
+            href={`/compare?job=${job.id}&ids=${selected.join(",")}`}
+            aria-disabled={selected.length < 2}
+            className={buttonVariants({ size: "sm" }) + (selected.length < 2 ? " pointer-events-none opacity-50" : "")}
+          >
+            <GitCompareArrows /> Compare{selected.length < 2 ? " (pick 2 or 3)" : ""}
+          </Link>
+        </div>
+      )}
+
+      <MatchSheet match={open} blind={blind} onClose={() => setOpenId(null)} onPanel={onPanel} />
     </div>
   );
 }
