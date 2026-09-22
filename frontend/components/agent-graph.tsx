@@ -107,9 +107,23 @@ function useNarrow(): boolean {
   );
 }
 
+/** True once the client has mounted. next-themes resolves the real theme from the OS/browser before the
+ * first paint, but the server always renders as if it were light (it cannot know the browser's preference).
+ * Unlike the rest of the app, React Flow's dark mode is a JS prop, not a `dark:` CSS class, so it cannot rely
+ * on the usual suppressHydrationWarning trick; it must render "light" until mounted, then switch, so the
+ * client's hydration pass matches the server. */
+function useMounted(): boolean {
+  return useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
+}
+
 export function AgentGraph({ nodes: activity }: { nodes: Record<string, NodeActivity> }) {
   const { resolvedTheme } = useTheme();
   const narrow = useNarrow();
+  const dark = useMounted() && resolvedTheme === "dark";
 
   const nodes = useMemo<Node<AgentNodeData>[]>(
     () =>
@@ -148,7 +162,7 @@ export function AgentGraph({ nodes: activity }: { nodes: Record<string, NodeActi
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
-        colorMode={resolvedTheme === "dark" ? "dark" : "light"}
+        colorMode={dark ? "dark" : "light"}
         fitView={!narrow}
         fitViewOptions={{ padding: 0.04 }}
         // On a phone, start at a readable size on the busiest part (matcher and panel) and let people drag from there.

@@ -313,10 +313,49 @@ Every agent's schema lives in code (Pydantic), so it is validated and retried au
 
 **Known limitations, stated honestly:** the event bus is in memory and one process only, so it would need a shared queue (for example Redis) to work across several server processes, and the buffer keeps the latest 300 events. Live states are shown as they arrive, so a call that was already running when you open the page is not shown as working. Most calls in the validation run were cache hits (fast and free, but they do not test real speed); only 4 were real calls, and the concurrency check is 3 calls at once, not a load test. The funnel's last step is set by hand (moving a card to Offer), so it is not a measure of the AI. The PDF uses built-in fonts, so characters outside Latin-1 (for example Hindi or Chinese names in the named report) print as "?". The graph layout is fixed data, not computed, so a new agent needs a node added by hand.
 
-### Phase 6: Testing and demo prep (Days 20–21)
+### Phase 6: Testing and demo prep (Days 20–21) — DONE
 1. Run the full validation suite; fix failures.
 2. Seed a demo dataset; write a 5-minute demo script (job → upload → live graph screening → panel debate → interview → email).
 3. Take screenshots for the report; record a backup demo video.
+
+**What was done:** every check from Phases 1-5 was re-run fresh in one sitting: 336 backend tests, all five real-AI
+scripts (127 of 127 checks), the full Playwright suite (37 tests), lint, typecheck and a production build. Nothing
+needed fixing on the backend. A demo dataset was seeded (`backend/scripts/seed_demo.py`): one job, "Backend
+Engineer", with all 10 sample candidates screened, a real panel review of the top 3, a full AI interview for the
+strongest candidate (Aarav Mehta, sent an invite then an offer), and a real rejection with skill-gap feedback and
+a learning roadmap for a genuine "no" (Rohan Das). `DEMO_SCRIPT.md` is the 5-minute walkthrough for a live
+presentation, with a fallback to the screenshots and video below if the live demo can't run. `frontend/scripts/
+demo-screenshots.mjs` produced 30 screenshots (15 screens × light/dark) into `docs/screenshots/`, and `frontend/
+scripts/demo-video.mjs` recorded a ~70-second backup walkthrough into `docs/video/demo.webm` using Playwright's
+video capture — a real walkthrough of the seeded data, plus two genuinely live AI moments (Ask-HR and the Live
+Agents graph) recorded live, not staged.
+
+**Bug the demo screenshots found:** taking a screenshot of `/agents` in dark mode (Chromium's
+`prefers-color-scheme` set before the first navigation, not toggled afterwards) tripped a React hydration
+mismatch and Next's dev-overlay error badge. The server always renders as if the browser were light (it cannot
+know the OS preference), and React Flow's `colorMode` is a JS prop, not a `dark:` CSS class, so it could not use
+the `suppressHydrationWarning` trick the rest of the app relies on for theme-dependent output. It now renders
+"light" until the component has mounted on the client, then switches, matching the pattern already used
+elsewhere in the app (`ThemeToggle` avoids the same trap by using CSS, not a JS branch). A regression test
+(`e2e/phase5.spec.ts`) now asserts zero console errors specifically when dark mode is set *before* the first
+navigation to `/agents` — the scenario the existing "no console errors" test did not cover, because it never
+combined an OS-dark start with a console-error assertion.
+
+**One correctness bug in my own tooling, not the app:** the first demo-dataset seed was run before the full
+Playwright suite. `phase1.spec.ts` deletes and re-uploads a few of the sample candidates by email as part of
+testing the delete button, which (correctly) gives them new database ids and resets their stage — wiping the
+interview, messages and pipeline stage the demo had just built for them. The fix was procedural, not a code
+change: seed the demo dataset only after every other check has run, since nothing after it touches
+candidates.
+
+**Known limitations, stated honestly:** the demo dataset and its "story" (one hire, one honest reject) were
+chosen by hand for a good narrative, not sampled at random. The backup video shows the seeded results, not a
+live re-run of the AI for every step (re-running everything on camera would make the video slow and its timing
+non-reproducible); only the two moments the script marks as live are actually live. The screenshot and video
+scripts read the demo job and candidate ids from the API at run time rather than hard-coding them, because
+SQLite reuses row ids after a delete, and hard-coded ids from an earlier run silently pointed at the wrong
+candidate once (this file records that mistake so it is not repeated silently again).
+
 
 ---
 

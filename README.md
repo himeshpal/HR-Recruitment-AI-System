@@ -4,7 +4,7 @@ An AI agent-based hiring platform: agents write job descriptions, parse and scre
 
 See [PLAN.md](PLAN.md) for the full design, phases and validation plan.
 
-**Status:** Phases 0 to 5 are done: foundation, job descriptions and resume parsing, candidate screening (Matcher with evidence, Bias Shield and blind mode, ranked screening board, Kanban pipeline), the three-persona Panel review with a moderator, the Compare view, the AI interview with a scorecard, the candidate Q&A chatbot with a recruiter inbox, outreach emails with calendar files, Ask-HR (Ctrl+K) and the Skill-Gap Coach. the Live Agents graph (real time, driven by real model calls), the dashboard funnel and activity timeline, the in-app Evaluation page and PDF candidate reports. Next: testing and demo preparation.
+**Status:** All six phases are done: foundation, job descriptions and resume parsing, candidate screening (Matcher with evidence, Bias Shield and blind mode, ranked screening board, Kanban pipeline), the three-persona Panel review with a moderator, the Compare view, the AI interview with a scorecard, the candidate Q&A chatbot with a recruiter inbox, outreach emails with calendar files, Ask-HR (Ctrl+K), the Skill-Gap Coach, the Live Agents graph (real time, driven by real model calls), the dashboard funnel and activity timeline, the in-app Evaluation page and PDF candidate reports, a seeded demo dataset, a 5-minute demo script (`DEMO_SCRIPT.md`), and a set of report screenshots and a backup demo video (`docs/`).
 
 ## Stack
 
@@ -32,6 +32,16 @@ See [PLAN.md](PLAN.md) for the full design, phases and validation plan.
    npm run dev
    ```
    Open <http://localhost:3000>.
+
+## Demo
+
+`DEMO_SCRIPT.md` is a 5-minute live-presentation script for the seeded demo dataset. To (re)seed it:
+
+```
+cd backend && .venv\Scripts\python scripts\seed_demo.py
+```
+
+`docs/screenshots/{light,dark}/` and `docs/video/demo.webm` are a report-ready screenshot set and a backup recording of the same walkthrough (`frontend/scripts/demo-screenshots.mjs` and `demo-video.mjs` regenerate them; run them after re-seeding, and after the full test suite, since some tests recreate sample candidates).
 
 ## Tests
 

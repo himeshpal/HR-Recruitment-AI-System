@@ -162,7 +162,14 @@ async function noSidewaysScroll(page: Page, what: string) {
   expect(overflow, `${what} scrolls sideways`).toBeLessThanOrEqual(1);
 }
 
-test("dark mode: dashboard, live agents and evaluation are readable", async ({ page }) => {
+test("dark mode: dashboard, live agents and evaluation are readable, with no hydration mismatch from starting in dark mode", async ({ page }) => {
+  // Unlike the plain "no console errors" test, colorScheme is set to dark BEFORE the first navigation, so the
+  // very first server-rendered HTML disagrees with what the client immediately knows about the OS/browser
+  // theme. This is exactly the situation that once made React Flow's colorMode prop hydrate mismatched
+  // (server "light", client "dark") on the very first visit to /agents.
+  const problems: string[] = [];
+  page.on("console", (m) => ["error", "warning"].includes(m.type()) && problems.push(`[${m.type()}] ${m.text().slice(0, 300)}`));
+  page.on("pageerror", (e) => problems.push(`[pageerror] ${String(e).slice(0, 300)}`));
   await page.emulateMedia({ colorScheme: "dark" });
   await scriptStream(page, { seq: 910001, type: "start", call_id: "d1", agent: "matcher", at: at(), model: "m" }, { seq: 910002, type: "finish", call_id: "d2", agent: "panel_moderator", at: at(), model: "m", tokens: 500, latency_ms: 1800, cached: false, preview: "The panel mostly agrees." });
   await page.goto("/");
@@ -174,6 +181,7 @@ test("dark mode: dashboard, live agents and evaluation are readable", async ({ p
   await page.goto("/evaluation");
   await expect(page.getByTestId("eval-total")).toBeVisible();
   await shot(page, "evaluation-dark");
+  expect(problems).toEqual([]);
 });
 
 test("phone width: dashboard, live agents and evaluation do not scroll sideways, and the menu still fits", async ({ page }) => {

@@ -1,7 +1,7 @@
 {
   "phase1": {
     "title": "Job descriptions and resume parsing",
-    "ran_at": "2026-09-22T00:12:08",
+    "ran_at": "2026-09-22T07:25:05",
     "checks": [
       {
         "name": "JD stream completes without error",
@@ -11,7 +11,7 @@
       {
         "name": "JD arrives as a real stream (many chunks)",
         "passed": true,
-        "detail": "80 chunks, first after 0.0s, total 0.1s"
+        "detail": "80 chunks, first after 0.0s, total 0.0s"
       },
       {
         "name": "JD has all required sections",
@@ -307,7 +307,7 @@
   },
   "phase2": {
     "title": "Matching and screening",
-    "ran_at": "2026-09-22T00:12:23",
+    "ran_at": "2026-09-22T07:25:11",
     "checks": [
       {
         "name": "backend: every candidate was screened",
@@ -393,7 +393,7 @@
   },
   "phase3": {
     "title": "Panel and interviews",
-    "ran_at": "2026-09-22T00:12:40",
+    "ran_at": "2026-09-22T07:25:16",
     "checks": [
       {
         "name": "Panel consensus orders better-vs-worse pairs correctly (>= 5 of 6)",
@@ -484,7 +484,7 @@
   },
   "phase4": {
     "title": "Q&A, outreach, Ask-HR and coach",
-    "ran_at": "2026-09-22T00:14:30",
+    "ran_at": "2026-09-22T07:27:26",
     "checks": [
       {
         "name": "At least 12 of 14 answerable questions are answered correctly with a source",
@@ -554,7 +554,7 @@
       {
         "name": "At least 13 of 15 questions return exactly the right candidates",
         "passed": true,
-        "detail": "14/15"
+        "detail": "15/15"
       },
       {
         "name": "Every hostile or unsupported request is refused",
@@ -595,7 +595,7 @@
   },
   "phase5": {
     "title": "Live agents, dashboard and reports",
-    "ran_at": "2026-09-22T00:33:52",
+    "ran_at": "2026-09-22T07:27:53",
     "checks": [
       {
         "name": "Every finish event on the live stream matches exactly one new database row",
@@ -610,7 +610,7 @@
       {
         "name": "A new question shows a real call: start, then finish, not cached, with time spent",
         "passed": true,
-        "detail": "latency 741 ms, 1249 tokens"
+        "detail": "latency 10654 ms, 1249 tokens"
       },
       {
         "name": "Three new questions sent at once each get their own start and finish",
@@ -630,7 +630,7 @@
       {
         "name": "No candidate name, email or phone appears in the stream or the activity log",
         "passed": true,
-        "detail": "searched 90,416 characters for 10 people"
+        "detail": "searched 79,215 characters for 10 people"
       },
       {
         "name": "The Resume Parser never has a preview",
