@@ -4,7 +4,7 @@ An AI agent-based hiring platform: agents write job descriptions, parse and scre
 
 See [PLAN.md](PLAN.md) for the full design, phases and validation plan.
 
-**Status:** Phases 0 to 4 are done: foundation, job descriptions and resume parsing, candidate screening (Matcher with evidence, Bias Shield and blind mode, ranked screening board, Kanban pipeline), the three-persona Panel review with a moderator, the Compare view, the AI interview with a scorecard, the candidate Q&A chatbot with a recruiter inbox, outreach emails with calendar files, Ask-HR (Ctrl+K) and the Skill-Gap Coach. Next: the live agent graph, dashboard and polish.
+**Status:** Phases 0 to 5 are done: foundation, job descriptions and resume parsing, candidate screening (Matcher with evidence, Bias Shield and blind mode, ranked screening board, Kanban pipeline), the three-persona Panel review with a moderator, the Compare view, the AI interview with a scorecard, the candidate Q&A chatbot with a recruiter inbox, outreach emails with calendar files, Ask-HR (Ctrl+K) and the Skill-Gap Coach. the Live Agents graph (real time, driven by real model calls), the dashboard funnel and activity timeline, the in-app Evaluation page and PDF candidate reports. Next: testing and demo preparation.
 
 ## Stack
 
@@ -42,6 +42,7 @@ cd backend  && .venv\Scripts\python scripts\phase1_check.py   # real end-to-end 
 cd backend  && .venv\Scripts\python scripts\phase2_check.py   # ranking, evidence, bias, injection checks (real LLM; slow the first time)
 cd backend  && .venv\Scripts\python scripts\phase3_check.py   # panel, interview evaluator and full mock interviews (real LLM; slow the first time)
 cd backend  && .venv\Scripts\python scripts\phase4_check.py   # Q&A, outreach, Ask-HR and coach checks (real LLM; slow the first time)
+cd backend  && .venv\Scripts\python scripts\phase5_check.py   # live events, funnel and PDF reports (real LLM; backend must be running)
 cd frontend && npx playwright test                            # browser tests (backend and frontend running)
 ```
 

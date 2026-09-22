@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
-import { AlertTriangle, ArrowRight, Gavel, Loader2, MessageSquareText, Quote, RotateCw, ThumbsUp } from "lucide-react";
+import { AlertTriangle, ArrowRight, FileDown, Gavel, Loader2, MessageSquareText, Quote, RotateCw, ThumbsUp } from "lucide-react";
 import { toast } from "sonner";
 
 import { Avatar } from "@/components/candidate-card";
@@ -14,13 +14,13 @@ import { ResumeViewer } from "@/components/resume-viewer";
 import { ScoreRing, scoreBand } from "@/components/score-ring";
 import { SkillChip } from "@/components/skill-chip";
 import { ErrorState } from "@/components/states";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { VerdictBadge } from "@/components/verdict-badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { postJson } from "@/lib/api";
+import { API_URL, postJson } from "@/lib/api";
 import { displayName } from "@/lib/blind";
 import { formatDate } from "@/lib/format";
 import type { Interview, InterviewSummary, Match, MatchDetail, Panel, ScoreParts } from "@/lib/types";
@@ -87,7 +87,17 @@ function SheetBody({ match, blind, onPanel }: { match: Match; blind: boolean; on
           <p className="text-xs text-muted-foreground">
             <span className="font-medium text-foreground">{band.label}</span> · AI confidence {Math.round(match.confidence * 100)}%
           </p>
-          {match.panel && <VerdictBadge verdict={match.panel.verdict} className="mt-1" />}
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            {match.panel && <VerdictBadge verdict={match.panel.verdict} />}
+            <a
+              href={`${API_URL}/api/matches/${match.id}/report.pdf?blind=${blind}`}
+              download
+              className={buttonVariants({ variant: "outline", size: "xs" })}
+              title={blind ? "Blind report: no name, email or location" : "Report with the candidate's name and email"}
+            >
+              <FileDown /> Download report
+            </a>
+          </div>
         </div>
       </SheetHeader>
 

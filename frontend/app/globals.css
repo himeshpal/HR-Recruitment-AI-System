@@ -141,3 +141,18 @@
   --series-2: #d95926;
   --series-3: #199e70;
 }
+
+/* React Flow's zoom buttons follow the app theme (its own dark mode leaves them blank white squares).
+   The selector is deliberately specific so it beats the library's own dark rules. */
+.react-flow .react-flow__controls .react-flow__controls-button {
+  background: var(--card);
+  color: var(--card-foreground);
+  border-bottom-color: var(--border);
+}
+.react-flow .react-flow__controls .react-flow__controls-button:hover {
+  background: var(--muted);
+}
+.react-flow .react-flow__controls .react-flow__controls-button svg,
+.react-flow .react-flow__controls .react-flow__controls-button svg path {
+  fill: currentColor;
+}

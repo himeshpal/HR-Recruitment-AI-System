@@ -30,6 +30,7 @@ from pathlib import Path
 import httpx
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from scripts.eval_store import save_checks  # noqa: E402
 from scripts.phase2_check import (  # noqa: E402
     API, DATA, GOLDEN, SAMPLES, check, ensure_candidates, results, screen, setup_jobs,
 )
@@ -293,6 +294,7 @@ def main() -> int:
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(report, indent=2), encoding="utf-8")
+    save_checks("phase4", "Q&A, outreach, Ask-HR and coach", results)
     failed = [r for r in results if not r[1]]
     print(f"\n{len(results) - len(failed)}/{len(results)} checks passed   (results saved to {OUT.relative_to(DATA.parent)})")
     for name, _, detail in failed:

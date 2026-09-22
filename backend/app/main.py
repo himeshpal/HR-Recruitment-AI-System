@@ -9,7 +9,9 @@ from sqlalchemy.orm import Session
 from app.config import get_settings
 from app.db import get_db, init_db
 from app.llm.client import LLMError
-from app.routers import ask, candidates, coach, interviews, jobs, outreach, panel, qa, screening
+from app.routers import (
+    agents, ask, candidates, coach, dashboard, evaluation, interviews, jobs, outreach, panel, qa, reports, screening,
+)
 
 
 @asynccontextmanager
@@ -34,6 +36,10 @@ app.include_router(qa.router)
 app.include_router(outreach.router)
 app.include_router(ask.router)
 app.include_router(coach.router)
+app.include_router(agents.router)
+app.include_router(dashboard.router)
+app.include_router(evaluation.router)
+app.include_router(reports.router)
 
 app.add_middleware(
     CORSMiddleware,

@@ -20,3 +20,4 @@ backend/data/models/
 frontend/dev.log
 frontend/test-results/
 frontend/.next/
+test-results/

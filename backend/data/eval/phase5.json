@@ -1,0 +1,25 @@
+{
+  "live": {
+    "events": 31,
+    "finishes": 27,
+    "uncached": 4,
+    "new_rows": 27,
+    "top3": [
+      1,
+      2,
+      7
+    ]
+  },
+  "funnel": {
+    "funnel": {
+      "applied": 10,
+      "screened": 10,
+      "panel": 3,
+      "interviewed": 0,
+      "offer": 0
+    }
+  },
+  "pdf": {
+    "pdfs": 10
+  }
+}

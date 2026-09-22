@@ -23,6 +23,7 @@ from pydantic import BaseModel, ValidationError
 
 from app.config import Settings, get_settings
 from app.llm.cache import DiskCache
+from app.services.events import bus, preview_of
 
 logger = logging.getLogger(__name__)
 
@@ -104,6 +105,7 @@ class LLMClient:
         self._clock = clock
         self._cooldown_until = 0.0  # shared by all threads: one 429 pauses everyone
         self._cooldown_lock = threading.Lock()
+        self._calls = threading.local()  # the id of the call this thread is making, for start/finish events
 
     # ---------- plumbing ----------
 
@@ -193,8 +195,23 @@ class LLMClient:
              "max_tokens": max_tokens, "schema": schema, "effort": reasoning_effort}
         )
 
+    def _begin(self, agent: str, model: str) -> None:
+        """Announce that a real (uncached) call is starting, for the Live Agent Graph."""
+        call_id = f"{threading.get_ident()}-{time.perf_counter_ns()}"
+        self._calls.current = call_id
+        bus.publish("start", call_id=call_id, agent=agent, model=model)
+
+    def _fail(self, agent: str, model: str, exc: Exception) -> None:
+        call_id = getattr(self._calls, "current", None)
+        self._calls.current = None
+        bus.publish("error", call_id=call_id, agent=agent, model=model, message=str(exc)[:200])
+
     def _log_run(self, agent: str, model: str, key: str, output: str, tokens: int,
                  latency_ms: int, cached: bool) -> None:
+        call_id = None if cached else getattr(self._calls, "current", None)
+        self._calls.current = None
+        bus.publish("finish", call_id=call_id or f"cache-{time.perf_counter_ns()}", agent=agent, model=model,
+                    tokens=tokens, latency_ms=latency_ms, cached=cached, preview=preview_of(agent, output))
         if self.session_factory is None:
             return
         from app.models import AgentRun
@@ -220,11 +237,16 @@ class LLMClient:
             return LLMResult(hit["text"], model, hit.get("tokens", 0), 0, True)
 
         start = time.perf_counter()
-        resp = self._with_retries(
-            lambda: self.client.chat.completions.create(
-                **self._request_kwargs(messages, model, temperature, max_tokens, reasoning_effort)
+        self._begin(agent, model)
+        try:
+            resp = self._with_retries(
+                lambda: self.client.chat.completions.create(
+                    **self._request_kwargs(messages, model, temperature, max_tokens, reasoning_effort)
+                )
             )
-        )
+        except LLMError as exc:
+            self._fail(agent, model, exc)
+            raise
         latency = int((time.perf_counter() - start) * 1000)
         text = resp.choices[0].message.content or ""
         tokens = resp.usage.total_tokens if resp.usage else 0
@@ -258,6 +280,7 @@ class LLMClient:
 
         total_tokens, start = 0, time.perf_counter()
         last_error = ""
+        self._begin(agent, model)
         for _ in range(max_repairs + 1):
             kwargs = self._request_kwargs(convo, model, temperature, max_tokens, reasoning_effort)
             kwargs["response_format"] = {"type": "json_object"}
@@ -271,6 +294,9 @@ class LLMClient:
                           "content": f"That reply was invalid: {last_error}.\n"
                                      "Reply again with only the corrected JSON object."}]
                 continue
+            except LLMError as exc:
+                self._fail(agent, model, exc)
+                raise
             raw = resp.choices[0].message.content or ""
             total_tokens += resp.usage.total_tokens if resp.usage else 0
             try:
@@ -290,9 +316,11 @@ class LLMClient:
             self._log_run(agent, model, key, text, total_tokens, latency, False)
             return parsed
 
-        raise LLMValidationError(
+        error = LLMValidationError(
             f"{agent}: no valid {schema.__name__} after {max_repairs + 1} attempts. Last error: {last_error}"
         )
+        self._fail(agent, model, error)
+        raise error
 
     def stream(self, messages: Messages, *, agent: str, tier: Tier = "large", model: str | None = None,
                temperature: float = 0.2, max_tokens: int | None = None,
@@ -309,12 +337,17 @@ class LLMClient:
             return
 
         start = time.perf_counter()
-        response = self._with_retries(
-            lambda: self.client.chat.completions.create(
-                **self._request_kwargs(messages, model, temperature, max_tokens, reasoning_effort),
-                stream=True
+        self._begin(agent, model)
+        try:
+            response = self._with_retries(
+                lambda: self.client.chat.completions.create(
+                    **self._request_kwargs(messages, model, temperature, max_tokens, reasoning_effort),
+                    stream=True
+                )
             )
-        )
+        except LLMError as exc:
+            self._fail(agent, model, exc)
+            raise
         parts: list[str] = []
         tokens = 0
         for chunk in response:

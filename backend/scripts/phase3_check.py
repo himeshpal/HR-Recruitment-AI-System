@@ -26,6 +26,7 @@ from pathlib import Path
 import httpx
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from scripts.eval_store import save_checks  # noqa: E402
 from app.agents.interviewer import evaluate_answer  # noqa: E402
 from app.agents.jd_generator import JobRequirements  # noqa: E402
 from app.agents.matcher import quote_in_text  # noqa: E402
@@ -277,6 +278,7 @@ def main() -> int:
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(report, indent=2), encoding="utf-8")
+    save_checks("phase3", "Panel and interviews", results)
     failed = [r for r in results if not r[1]]
     print(f"\n{len(results) - len(failed)}/{len(results)} checks passed   (results saved to {OUT.relative_to(DATA.parent)})")
     for name, _, detail in failed:

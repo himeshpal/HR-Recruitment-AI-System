@@ -42,7 +42,7 @@ A **Bias Shield** (blind screening + fairness panel) sits across the whole pipel
 |---|---|---|
 | Frontend | **Next.js (App Router) + TypeScript**, Tailwind, shadcn/ui, Framer Motion, Recharts, React Flow | Modern, polished UI with file-based routing, layouts and loading/error states built in |
 | Backend | Python + FastAPI, with SSE streaming | Fast, simple, streams AI output live |
-| Agent orchestration | LangGraph (state graph) | Visual, explainable flow; nodes map to agents |
+| Agent orchestration | Plain Python pipelines with agents inside fixed steps (LangGraph was planned and dropped, see Phase 5) | Simple, deterministic and testable; the live graph is driven by real events, not by a framework |
 | Database | SQLite (via SQLAlchemy) | Zero setup |
 | Embeddings | `fastembed` (`all-MiniLM-L6-v2` via ONNX) + numpy cosine similarity, run locally | Free, no API needed. Replaces the originally planned ChromaDB + sentence-transformers: no PyTorch, no vector database, and a few dozen resumes do not need one |
 | LLM | **Groq API** (OpenAI-compatible) | Free tier, very fast, so streaming looks great |
@@ -105,7 +105,7 @@ HR/
 │   │   │   ├── outreach.py
 │   │   │   ├── ask_hr.py
 │   │   │   └── skill_coach.py
-│   │   ├── graph/pipeline.py    # LangGraph orchestration
+│   │   ├── services/events.py   # live agent event bus (feeds the Live Agent Graph)
 │   │   ├── services/            # embeddings, anonymizer, evidence check, fairness
 │   │   ├── routers/             # jobs, candidates, screening, interviews, chat, analytics
 │   │   └── prompts/             # one .md or .txt prompt per agent
@@ -127,7 +127,7 @@ HR/
     └── lib/                     # typed API client, SSE hook, theme
 ```
 
-**How Next.js and the backend fit together:** Next.js is the UI only. The AI work stays in the Python FastAPI backend, because LangGraph, sentence-transformers and ChromaDB are Python libraries. The browser calls FastAPI directly using `NEXT_PUBLIC_API_URL` (default `http://localhost:8000`), and FastAPI has CORS enabled for `http://localhost:3000`. Streaming (SSE) also goes directly to FastAPI, because Next.js rewrites/proxies can buffer streamed responses. Pages that use browser features (drag-and-drop, Web Speech API, React Flow, Framer Motion) are client components (`"use client"`).
+**How Next.js and the backend fit together:** Next.js is the UI only. The AI work stays in the Python FastAPI backend, because sentence-transformers and ChromaDB are Python libraries. The browser calls FastAPI directly using `NEXT_PUBLIC_API_URL` (default `http://localhost:8000`), and FastAPI has CORS enabled for `http://localhost:3000`. Streaming (SSE) also goes directly to FastAPI, because Next.js rewrites/proxies can buffer streamed responses. Pages that use browser features (drag-and-drop, Web Speech API, React Flow, Framer Motion) are client components (`"use client"`).
 
 ---
 
@@ -280,11 +280,38 @@ Every agent's schema lives in code (Pydantic), so it is validated and retried au
 
 **Known limitations, stated honestly:** the test questions were written by me and I tuned the bot after seeing which failed, so the 14 of 14 is partly fitted to them and would probably be lower on new questions. The company file is small, fictional and English-only. Ask-HR is scored against an implementation I wrote from the same reading of the questions, so a shared misreading would not show. Only four emails and three roadmaps were checked, and their *quality* beyond the automatic rules was read by me, not by recruiters. The coach names resources in general terms and cannot check that a course exists. The invitation time uses the browser's timezone. Nothing is actually sent: the app drafts, the recruiter copies or opens their own email app.
 
-### Phase 5: Showpiece UI and polish (Days 16–19)
-1. **Live Agent Graph** (React Flow): nodes for each agent, lighting up in real time via SSE from the LangGraph run, with streaming "thoughts" beside it.
+### Phase 5: Showpiece UI and polish (Days 16–19) — DONE
+1. **Live Agent Graph** (React Flow): nodes for each agent, lighting up in real time via SSE, with the agents' "thoughts" beside it.
 2. **Dashboard**: funnel chart, stat cards, and the agent activity timeline (from `AgentRun`).
 3. **Evaluation tab**: shows the validation results (section 9) inside the app.
 4. Dark/light mode, skeleton loaders, transitions, responsive layout, PDF export of a candidate report, and empty/error states.
+5. **Check:** `backend/scripts/phase5_check.py` (results in `backend/data/eval/phase5.json`).
+
+**Decision: no LangGraph.** The plan named it, but the pipelines were built as plain Python (each step is a function; agents sit inside steps; code makes the decisions), and adding a framework that orchestrates nothing would only make the graph look more real than it is. Instead the graph is driven by **real events**: `LLMClient`, the one place every model call goes through, publishes a *start*, then a *finish* (or *error*) event for each call to an in-memory bus (`services/events.py`). `GET /api/agents/stream` sends them to the browser as server-sent events. So a node can only light up because a real call happened, this works for every feature without per-pipeline plumbing, and the durable record is still the `AgentRun` table.
+
+**What was built (implemented):**
+- **Live agents** (`/agents`): 17 nodes (15 AI agents and 2 plain-code steps drawn dashed as "No AI"; the three outreach kinds share one node and the demo helper shares the evaluator's) in a React Flow graph. A node shows Idle, Working (pulsing, animated edges), Done (with latency, or "cached") or Failed, as text as well as colour. A one-line ticker and a feed show the agents' latest words; a table lists calls, cache hits, tokens and speed per agent (the accessible version of the graph). History fills the feed but never lights the graph, so it only ever shows what happens while you watch.
+- **Privacy of "thoughts":** the words an agent produced are shown only for agents that never see who a candidate is. The Resume Parser reads raw resumes, so its output is never shown or sent (the check searches the whole stream and activity log for every candidate's name, email and phone).
+- **Dashboard:** stat cards, a hiring funnel (Applied, Screened, Panel reviewed, Interviewed, Offer; each step counts distinct people and its definition is shown) and an agent activity timeline.
+- **Evaluation** (`/evaluation`): every check from the real-AI scripts, phase by phase, read from `backend/data/eval/checks.json` (each script now writes it), with a "what this does not prove" note.
+- **PDF report** per candidate and job (button in the candidate sheet): score, evidence, skills, panel verdict and interview scorecard. It follows blind mode: blind by default (no name, email or location), and the named version only when asked.
+- **Polish:** loading skeletons and empty and error states for each new page; dark mode and phone layouts checked (the phone header became a brand row plus a scrollable menu, because nine items no longer fit on one row).
+
+**Phase 5 validation results** (real AI; criteria fixed before the first run, one stricter check added after the first run; the final run is 13 of 13 checks):
+
+| Check | Result |
+|---|---|
+| Finish events on the live stream vs new rows in the database | 27 vs 27 (exact match) |
+| Every uncached call announced with a start carrying the same id | 4 of 4 |
+| Three new questions sent at the same moment each get their own start and finish | yes (3 distinct ids) |
+| Screening shows a matcher event per candidate; a panel run shows 9 panelist and 3 moderator events | 11 for 10 candidates; 9 and 3 |
+| Candidate names, emails and phones anywhere in the stream or activity log | 0 (90,000 characters searched for 10 people) |
+| Dashboard funnel vs an independent recount from the raw APIs | equal on every step |
+| PDFs: blind ones name nobody / named ones include the person / printed score equals the API score | 10 of 10 each |
+
+**Bugs the tests and the browser found:** (1) The first version of the graph counted the history replay as activity, so nodes showed "Done, 13 calls" before anything happened; history now only fills the feed. (2) Phase 1 records one check per resume, so check names repeat; used as React keys they raised duplicate-key errors on the Evaluation page (the dev overlay showed "5 Issues"); rows are now keyed by position. (3) React Flow's attribution was hidden, which its licence only allows with a Pro subscription; it is visible again. (4) With two more menu items the phone header was 63 px too wide. (5) React Flow's zoom buttons rendered as blank white squares in dark mode. (6) Agent "thoughts" were raw JSON; they now show the prose field. (7) Edges between nodes in the same column looped around; they now run straight down. (8) The full flow was unreadably small beside the feed, so the graph now has the full width, and on phones it opens zoomed in. (9) My first validation run only exercised one real (uncached) call, which is too little to say anything about concurrency, so I added the three-at-once check.
+
+**Known limitations, stated honestly:** the event bus is in memory and one process only, so it would need a shared queue (for example Redis) to work across several server processes, and the buffer keeps the latest 300 events. Live states are shown as they arrive, so a call that was already running when you open the page is not shown as working. Most calls in the validation run were cache hits (fast and free, but they do not test real speed); only 4 were real calls, and the concurrency check is 3 calls at once, not a load test. The funnel's last step is set by hand (moving a card to Offer), so it is not a measure of the AI. The PDF uses built-in fonts, so characters outside Latin-1 (for example Hindi or Chinese names in the named report) print as "?". The graph layout is fixed data, not computed, so a new agent needs a node added by hand.
 
 ### Phase 6: Testing and demo prep (Days 20–21)
 1. Run the full validation suite; fix failures.

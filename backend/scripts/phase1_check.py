@@ -15,6 +15,7 @@ import httpx
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from app.services.inclusive_language import check_inclusive_language  # noqa: E402
+from scripts.eval_store import save_checks  # noqa: E402
 from scripts.make_sample_resumes import OUT_DIR, build  # noqa: E402
 
 API = "http://localhost:8000"
@@ -134,6 +135,7 @@ def main() -> int:
         print(f"Cannot reach {API}. Start the backend first:  .venv\\Scripts\\python -m uvicorn app.main:app")
         return 2
 
+    save_checks("phase1", "Job descriptions and resume parsing", results)
     failed = [r for r in results if not r[1]]
     print(f"\n{len(results) - len(failed)}/{len(results)} checks passed")
     for name, _, detail in failed:

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Briefcase, Kanban, LayoutDashboard, ListChecks, Search, Sparkles, Users } from "lucide-react";
+import { Activity, Briefcase, FlaskConical, Kanban, LayoutDashboard, ListChecks, Search, Sparkles, Users } from "lucide-react";
 
 import { OPEN_ASK_EVENT } from "@/components/ask-palette";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -14,6 +14,8 @@ const NAV = [
   { href: "/candidates", label: "Candidates", icon: Users },
   { href: "/screening", label: "Screening", icon: ListChecks },
   { href: "/pipeline", label: "Pipeline", icon: Kanban },
+  { href: "/agents", label: "Live agents", icon: Activity },
+  { href: "/evaluation", label: "Evaluation", icon: FlaskConical },
 ];
 
 function Brand() {
@@ -69,33 +71,37 @@ export function AppSidebar() {
         </div>
       </aside>
 
-      {/* Mobile: top bar */}
-      <header className="sticky top-0 z-30 flex items-center justify-between gap-2 border-b bg-background/80 px-4 py-2 backdrop-blur md:hidden">
-        <Brand />
-        <nav className="flex items-center gap-1" aria-label="Main">
+      {/* Mobile: brand and actions on one row, the menu as a scrollable strip below (nine items do not fit in one row). */}
+      <header className="sticky top-0 z-30 border-b bg-background/80 backdrop-blur md:hidden">
+        <div className="flex items-center justify-between gap-2 px-4 py-2">
+          <Brand />
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              aria-label="Ask HR"
+              onClick={() => window.dispatchEvent(new Event(OPEN_ASK_EVENT))}
+              className="rounded-lg p-2 text-muted-foreground transition-colors"
+            >
+              <Search className="size-4" />
+            </button>
+            <ThemeToggle />
+          </div>
+        </div>
+        <nav className="flex gap-1 overflow-x-auto px-3 pb-2" aria-label="Main">
           {NAV.map(({ href, label, icon: Icon }) => (
             <Link
               key={href}
               href={href}
-              aria-label={label}
               aria-current={isActive(href) ? "page" : undefined}
               className={cn(
-                "rounded-lg p-2 transition-colors",
+                "flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors",
                 isActive(href) ? "bg-primary/10 text-primary" : "text-muted-foreground",
               )}
             >
-              <Icon className="size-4" />
+              <Icon className="size-3.5" />
+              {label}
             </Link>
           ))}
-          <button
-            type="button"
-            aria-label="Ask HR"
-            onClick={() => window.dispatchEvent(new Event(OPEN_ASK_EVENT))}
-            className="rounded-lg p-2 text-muted-foreground transition-colors"
-          >
-            <Search className="size-4" />
-          </button>
-          <ThemeToggle />
         </nav>
       </header>
     </>
